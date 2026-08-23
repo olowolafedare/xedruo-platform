@@ -62,6 +62,8 @@ const AuthenticatedApp = () => {
       <Route path="/company/pay-and-play" element={<PayAndPlay />} />
       <Route path="/management" element={<Management />} />
       <Route path="/company/pay-bank" element={<XedruoPayBank />} />
+      {/* Parent-company URL for Music Distribution resolves to the untouched existing platform. */}
+      <Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} />
       <Route path="/company/:slug" element={<CompanyDashboard />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -73,6 +75,7 @@ const AuthenticatedApp = () => {
           <Route path="/welcome" element={<WelcomeXedruo />} />
           <Route path="/parent-company" element={<ParentCompany />} />
           <Route path="/developer-workstation" element={<DeveloperWorkstation />} />
+          {/* Existing Music Distribution platform — intentionally left untouched. */}
           <Route path="/distribution" element={<Distribution />} />
           <Route path="/promotion" element={<Promotion />} />
           <Route path="/producer-suite" element={<ProducerSuite />} />
