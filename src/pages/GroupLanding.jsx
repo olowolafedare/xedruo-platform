@@ -16,7 +16,7 @@ const companies = [
   { slug: "properties", name: "Xedruo Properties", desc: "Real estate, property listings & services", icon: "🏠" },
   { slug: "spacetruo", name: "Spacetruo", desc: "Space, offices, venues & bookings", icon: "🏢" },
   { slug: "xedruo-ai", name: "Xedruo AI", desc: "AI tools, app building & intelligent workflows", icon: "✨" },
-  { slug: "music-distribution", name: "Xedruo Music Distribution", desc: "Music distribution, artists, labels & creator services", icon: "🎵" },
+  { slug: "music-distribution", name: "Xedruo Music Distribution", desc: "Existing music distribution platform — preserved as-is under Xedruo Group Holdings", icon: "🎵", existing: true },
 ];
 
 export default function GroupLanding() {
@@ -77,17 +77,20 @@ export default function GroupLanding() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {companies.map((company, index) => (
-              <Link key={company.slug} to={`/company/${company.slug}`} className="group rounded-2xl border border-white/10 bg-white/[.035] p-5 hover:bg-white/[.07] hover:border-cyan-300/25 transition">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-xl">{company.icon}</div>
-                  <span className="text-xs text-slate-600 font-semibold">{String(index + 2).padStart(2, "0")}</span>
-                </div>
-                <h3 className="font-bold text-lg group-hover:text-cyan-300 transition">{company.name}</h3>
-                <p className="text-sm text-slate-400 mt-2 min-h-10 leading-5">{company.desc}</p>
-                <div className="mt-5 text-sm text-cyan-300 font-semibold inline-flex items-center gap-1">Open dashboard <ExternalLink className="w-3.5 h-3.5" /></div>
-              </Link>
-            ))}
+            {companies.map((company, index) => {
+              const destination = company.existing ? "/distribution" : `/company/${company.slug}`;
+              return (
+                <Link key={company.slug} to={destination} className="group rounded-2xl border border-white/10 bg-white/[.035] p-5 hover:bg-white/[.07] hover:border-cyan-300/25 transition">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-xl">{company.icon}</div>
+                    <span className="text-xs text-slate-600 font-semibold">{String(index + 2).padStart(2, "0")}</span>
+                  </div>
+                  <h3 className="font-bold text-lg group-hover:text-cyan-300 transition">{company.name}</h3>
+                  <p className="text-sm text-slate-400 mt-2 min-h-10 leading-5">{company.desc}</p>
+                  <div className="mt-5 text-sm text-cyan-300 font-semibold inline-flex items-center gap-1">{company.existing ? "Open existing platform" : "Open dashboard"} <ExternalLink className="w-3.5 h-3.5" /></div>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
