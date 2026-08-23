@@ -1,0 +1,36 @@
+name: Import standalone Xedruo migration
+
+on:
+  push:
+    paths:
+      - 'xedruo-platform-standalone-migration.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract standalone application
+        run: |
+          rm -rf .migration-work
+          mkdir .migration-work
+          unzip -q xedruo-platform-standalone-migration.zip -d .migration-work
+          cp -a .migration-work/. .
+          rm -rf .migration-work xedruo-platform-standalone-migration.zip
+
+      - name: Commit migrated application
+        run: |
+          git config user.name 'Xedruo Migration Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No migration changes detected.'
+            exit 0
+          fi
+          git commit -m 'Migrate complete Xedruo application from Base44'
+          git push
