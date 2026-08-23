@@ -1,0 +1,1 @@
+Temporary marker for parent-company landing-page fix. The production homepage must present Xedruo Group Holdings as the parent company before the 14 operating companies.
