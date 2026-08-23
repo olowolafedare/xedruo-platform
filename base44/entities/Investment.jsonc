@@ -1,0 +1,33 @@
+{
+  "name": "Investment",
+  "type": "object",
+  "properties": {
+    "shares": {
+      "type": "number",
+      "default": 0
+    },
+    "price_per_share": {
+      "type": "number",
+      "default": 0
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed"
+      ],
+      "default": "confirmed"
+    }
+  },
+  "required": [
+    "shares"
+  ]
+}

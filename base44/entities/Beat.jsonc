@@ -1,0 +1,60 @@
+{
+  "name": "Beat",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "mood": {
+      "type": "string"
+    },
+    "bpm": {
+      "type": "number"
+    },
+    "key": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number",
+      "default": 0
+    },
+    "exclusive_price": {
+      "type": "number"
+    },
+    "license": {
+      "type": "string",
+      "enum": [
+        "basic",
+        "premium",
+        "exclusive"
+      ],
+      "default": "basic"
+    },
+    "artwork_url": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sales": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "title",
+    "producer"
+  ]
+}

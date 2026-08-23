@@ -1,0 +1,46 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "product_type": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "NGN"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "refunded",
+        "cancelled"
+      ],
+      "default": "completed"
+    },
+    "buyer_name": {
+      "type": "string"
+    },
+    "buyer_email": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "product_id",
+    "amount"
+  ]
+}

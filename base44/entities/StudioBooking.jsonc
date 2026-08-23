@@ -1,0 +1,44 @@
+{
+  "name": "StudioBooking",
+  "type": "object",
+  "properties": {
+    "service": {
+      "type": "string",
+      "enum": [
+        "studio",
+        "mixing"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "cancelled"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "service",
+    "name",
+    "email",
+    "phone",
+    "date"
+  ]
+}

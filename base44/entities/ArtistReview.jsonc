@@ -1,0 +1,48 @@
+{
+  "name": "ArtistReview",
+  "type": "object",
+  "properties": {
+    "artist_id": {
+      "type": "string"
+    },
+    "reviewer_name": {
+      "type": "string"
+    },
+    "reviewer_type": {
+      "type": "string",
+      "enum": [
+        "fan",
+        "client",
+        "promoter",
+        "artist"
+      ],
+      "default": "fan"
+    },
+    "rating": {
+      "type": "number",
+      "default": 5
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "booking_type": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed"
+      ],
+      "default": "completed"
+    }
+  },
+  "required": [
+    "artist_id",
+    "reviewer_name",
+    "rating"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "name": "WalletTransaction",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "credit",
+        "debit"
+      ],
+      "default": "credit"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "NGN",
+        "USD",
+        "GBP",
+        "EUR",
+        "GHS",
+        "KES",
+        "ZAR"
+      ],
+      "default": "NGN"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "royalty",
+        "beat_sale",
+        "transfer",
+        "withdrawal",
+        "subscription",
+        "payment_link",
+        "ticket_sale",
+        "event_revenue"
+      ],
+      "default": "royalty"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "completed"
+    },
+    "artist_share": {
+      "type": "number",
+      "default": 0
+    },
+    "producer_share": {
+      "type": "number",
+      "default": 0
+    },
+    "xedruo_share": {
+      "type": "number",
+      "default": 0
+    },
+    "linked_release_id": {
+      "type": "string"
+    },
+    "linked_event_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "amount"
+  ]
+}

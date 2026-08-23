@@ -1,0 +1,40 @@
+{
+  "name": "KycDocument",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "bvn",
+        "nin",
+        "passport",
+        "drivers_license",
+        "utility_bill",
+        "cac",
+        "tin"
+      ],
+      "default": "nin"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "document_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ]
+}

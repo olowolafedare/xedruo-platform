@@ -1,0 +1,44 @@
+{
+  "name": "Beneficiary",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "account_number": {
+      "type": "string"
+    },
+    "bank_name": {
+      "type": "string"
+    },
+    "bank_code": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "NGN"
+    },
+    "country": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "bank",
+        "mobile_money",
+        "crypto",
+        "email"
+      ],
+      "default": "bank"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

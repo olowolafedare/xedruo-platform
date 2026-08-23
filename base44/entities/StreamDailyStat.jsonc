@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "properties": {
+    "release_id": {
+      "type": "string"
+    },
+    "artist_id": {
+      "type": "string"
+    },
+    "stat_date": {
+      "type": "string"
+    },
+    "streams": {
+      "type": "number",
+      "default": 0.0
+    },
+    "source": {
+      "type": "string",
+      "default": "distribution"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.artist_id": "{{user.id}}"
+    },
+    "create": {
+      "data.artist_id": "{{user.id}}"
+    },
+    "update": {
+      "data.artist_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.artist_id": "{{user.id}}"
+    }
+  },
+  "required": [],
+  "name": "StreamDailyStat"
+}

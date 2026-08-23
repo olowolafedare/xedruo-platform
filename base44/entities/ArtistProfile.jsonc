@@ -1,0 +1,176 @@
+{
+  "name": "ArtistProfile",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "stage_name": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "manager_name": {
+      "type": "string"
+    },
+    "booking_email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string"
+    },
+    "booking_fee": {
+      "type": "number",
+      "default": 0
+    },
+    "performance_fee": {
+      "type": "number",
+      "default": 0
+    },
+    "feature_price": {
+      "type": "number",
+      "default": 0
+    },
+    "collaboration_price": {
+      "type": "number",
+      "default": 0
+    },
+    "songwriting_price": {
+      "type": "number",
+      "default": 0
+    },
+    "studio_session_price": {
+      "type": "number",
+      "default": 0
+    },
+    "music_video_price": {
+      "type": "number",
+      "default": 0
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "spotify_url": {
+      "type": "string"
+    },
+    "apple_music_url": {
+      "type": "string"
+    },
+    "instagram_url": {
+      "type": "string"
+    },
+    "twitter_url": {
+      "type": "string"
+    },
+    "tiktok_url": {
+      "type": "string"
+    },
+    "youtube_url": {
+      "type": "string"
+    },
+    "facebook_url": {
+      "type": "string"
+    },
+    "audiomack_url": {
+      "type": "string"
+    },
+    "soundcloud_url": {
+      "type": "string"
+    },
+    "boomplay_url": {
+      "type": "string"
+    },
+    "deezer_url": {
+      "type": "string"
+    },
+    "bandcamp_url": {
+      "type": "string"
+    },
+    "mixcloud_url": {
+      "type": "string"
+    },
+    "telegram_url": {
+      "type": "string"
+    },
+    "threads_url": {
+      "type": "string"
+    },
+    "snapchat_url": {
+      "type": "string"
+    },
+    "linkedin_url": {
+      "type": "string"
+    },
+    "twitch_url": {
+      "type": "string"
+    },
+    "pinterest_url": {
+      "type": "string"
+    },
+    "website_url": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "banner_url": {
+      "type": "string"
+    },
+    "gallery_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "gallery_videos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "monthly_listeners": {
+      "type": "number",
+      "default": 0
+    },
+    "followers": {
+      "type": "number",
+      "default": 0
+    },
+    "total_streams": {
+      "type": "number",
+      "default": 0
+    },
+    "availability_calendar": {
+      "type": "string"
+    },
+    "payment_details": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

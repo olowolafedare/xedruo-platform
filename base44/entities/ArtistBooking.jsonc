@@ -1,0 +1,66 @@
+{
+  "name": "ArtistBooking",
+  "type": "object",
+  "properties": {
+    "artist_id": {
+      "type": "string"
+    },
+    "artist_name": {
+      "type": "string"
+    },
+    "requester_name": {
+      "type": "string"
+    },
+    "requester_email": {
+      "type": "string"
+    },
+    "requester_phone": {
+      "type": "string"
+    },
+    "booking_type": {
+      "type": "string",
+      "enum": [
+        "live_performance",
+        "feature",
+        "collaboration",
+        "songwriting",
+        "brand_ambassador",
+        "event_appearance",
+        "studio_session",
+        "voice_over",
+        "message"
+      ],
+      "default": "live_performance"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "venue": {
+      "type": "string"
+    },
+    "budget": {
+      "type": "number",
+      "default": 0
+    },
+    "message": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "declined",
+        "completed"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "artist_id",
+    "requester_name",
+    "requester_email",
+    "booking_type"
+  ]
+}

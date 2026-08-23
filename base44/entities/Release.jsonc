@@ -1,0 +1,142 @@
+{
+  "name": "Release",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "artist": {
+      "type": "string"
+    },
+    "featured_artist": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "single",
+        "album",
+        "ep"
+      ],
+      "default": "single"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "scheduled",
+        "in_review",
+        "live",
+        "rejected",
+        "archived",
+        "takedown"
+      ],
+      "default": "draft"
+    },
+    "release_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "artwork_url": {
+      "type": "string"
+    },
+    "audio_url": {
+      "type": "string"
+    },
+    "royalties": {
+      "type": "number",
+      "default": 0
+    },
+    "streams": {
+      "type": "number",
+      "default": 0
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "pending",
+        "confirmed",
+        "failed"
+      ],
+      "default": "unpaid"
+    },
+    "payment_transaction_id": {
+      "type": "string"
+    },
+    "distribution_unlocked": {
+      "type": "boolean",
+      "default": false
+    },
+    "territories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "worldwide"
+      ]
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "content_id_status": {
+      "type": "string",
+      "enum": [
+        "not_enrolled",
+        "pending",
+        "active",
+        "rejected"
+      ],
+      "default": "not_enrolled"
+    },
+    "version": {
+      "type": "string",
+      "default": "v1"
+    },
+    "metadata_valid": {
+      "type": "boolean",
+      "default": false
+    },
+    "fast_review": {
+      "type": "boolean",
+      "default": false
+    },
+    "distribution_attempts": {
+      "type": "number",
+      "default": 0
+    },
+    "last_distributed_at": {
+      "type": "string"
+    },
+    "correction_notes": {
+      "type": "string"
+    },
+    "takedown_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "requested",
+        "processing",
+        "completed"
+      ],
+      "default": "none"
+    },
+    "takedown_reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "artist"
+  ]
+}

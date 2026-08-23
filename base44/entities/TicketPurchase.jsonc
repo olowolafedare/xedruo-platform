@@ -1,0 +1,82 @@
+{
+  "name": "TicketPurchase",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "event_title": {
+      "type": "string"
+    },
+    "event_date": {
+      "type": "string"
+    },
+    "venue": {
+      "type": "string"
+    },
+    "ticket_type": {
+      "type": "string",
+      "enum": [
+        "general",
+        "vip",
+        "early_bird",
+        "free"
+      ],
+      "default": "general"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "NGN"
+    },
+    "buyer_name": {
+      "type": "string"
+    },
+    "buyer_email": {
+      "type": "string"
+    },
+    "buyer_phone": {
+      "type": "string"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "free",
+        "confirmed",
+        "failed",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "qr_code": {
+      "type": "string"
+    },
+    "ticket_number": {
+      "type": "string"
+    },
+    "artist_share": {
+      "type": "number",
+      "default": 0
+    },
+    "producer_share": {
+      "type": "number",
+      "default": 0
+    },
+    "xedruo_share": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "event_id",
+    "buyer_name",
+    "buyer_email"
+  ]
+}

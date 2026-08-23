@@ -1,0 +1,57 @@
+{
+  "name": "Campaign",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "song": {
+      "type": "string"
+    },
+    "package": {
+      "type": "string",
+      "enum": [
+        "starter",
+        "street_favorite",
+        "recognized_artist",
+        "top_chart"
+      ],
+      "default": "starter"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "completed"
+      ],
+      "default": "draft"
+    },
+    "budget": {
+      "type": "number",
+      "default": 0
+    },
+    "reach": {
+      "type": "number",
+      "default": 0
+    },
+    "streams": {
+      "type": "number",
+      "default": 0
+    },
+    "clicks": {
+      "type": "number",
+      "default": 0
+    },
+    "growth": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "info",
+        "success",
+        "warning",
+        "error"
+      ],
+      "default": "info"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "distribution",
+        "promotion",
+        "royalty",
+        "payment",
+        "investment",
+        "system",
+        "support"
+      ],
+      "default": "system"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "action_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "message"
+  ]
+}

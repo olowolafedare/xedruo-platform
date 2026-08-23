@@ -1,0 +1,62 @@
+{
+  "name": "RoyaltyStatement",
+  "type": "object",
+  "properties": {
+    "period": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "streaming",
+        "publishing",
+        "producer",
+        "sync",
+        "performance",
+        "ticket"
+      ],
+      "default": "streaming"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "NGN"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "withdrawn"
+      ],
+      "default": "pending"
+    },
+    "streams": {
+      "type": "number",
+      "default": 0
+    },
+    "songs": {
+      "type": "number",
+      "default": 0
+    },
+    "artist_share": {
+      "type": "number",
+      "default": 0
+    },
+    "producer_share": {
+      "type": "number",
+      "default": 0
+    },
+    "xedruo_share": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "period",
+    "amount"
+  ]
+}

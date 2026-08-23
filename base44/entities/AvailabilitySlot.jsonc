@@ -1,0 +1,63 @@
+{
+  "name": "AvailabilitySlot",
+  "type": "object",
+  "properties": {
+    "artist_id": {
+      "type": "string"
+    },
+    "artist_name": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "booking_type": {
+      "type": "string",
+      "enum": [
+        "any",
+        "live_performance",
+        "feature",
+        "collaboration",
+        "songwriting",
+        "studio_session",
+        "voice_over",
+        "event_appearance",
+        "brand_ambassador"
+      ],
+      "default": "any"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "booked",
+        "cancelled"
+      ],
+      "default": "open"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "booked_by_booking_id": {
+      "type": "string"
+    },
+    "booked_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "artist_id",
+    "date",
+    "start_time"
+  ]
+}

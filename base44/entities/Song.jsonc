@@ -1,0 +1,90 @@
+{
+  "name": "Song",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "artist": {
+      "type": "string"
+    },
+    "composers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lyricists": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "publishers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "isrc": {
+      "type": "string"
+    },
+    "iswc": {
+      "type": "string"
+    },
+    "upc": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "duration": {
+      "type": "number"
+    },
+    "release_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "splits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "percentage": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "registered",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "sync_available": {
+      "type": "boolean",
+      "default": false
+    },
+    "content_id": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "title",
+    "artist"
+  ]
+}

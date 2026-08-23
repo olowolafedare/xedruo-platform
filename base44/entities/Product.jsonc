@@ -1,0 +1,68 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "merch",
+        "album",
+        "single",
+        "beat_pack",
+        "sample_pack",
+        "drum_kit",
+        "preset",
+        "template",
+        "course",
+        "ebook",
+        "digital_download",
+        "membership"
+      ],
+      "default": "digital_download"
+    },
+    "description": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "NGN"
+    },
+    "inventory": {
+      "type": "number",
+      "default": -1
+    },
+    "artwork_url": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "archived"
+      ],
+      "default": "active"
+    },
+    "sales": {
+      "type": "number",
+      "default": 0
+    },
+    "digital": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
