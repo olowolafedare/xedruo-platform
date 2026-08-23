@@ -1,13 +1,12 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -42,6 +41,11 @@ import WelcomeXedruo from './pages/WelcomeXedruo';
 import DeveloperWorkstation from './pages/DeveloperWorkstation';
 import ParentCompany from './pages/ParentCompany';
 
+const independentCompanies = [
+  'pay-and-play','sportruo','hireuo','adom','agruo','healthruo','education',
+  'capital','energy','logistics','properties','spacetruo','xedruo-ai'
+];
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -59,12 +63,15 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<GroupLanding />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/ecosystem" element={<Ecosystem />} />
-      <Route path="/company/pay-and-play" element={<PayAndPlay />} />
-      <Route path="/management" element={<Management />} />
-      <Route path="/company/pay-bank" element={<XedruoPayBank />} />
-      {/* Parent-company URL for Music Distribution resolves to the untouched existing platform. */}
+      <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} />
       <Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} />
       <Route path="/company/:slug" element={<CompanyDashboard />} />
+      <Route path="/management" element={<Management />} />
+      <Route path="/company/pay-bank" element={<XedruoPayBank />} />
+      <Route path="/pay-and-play" element={<PayAndPlay />} />
+      {independentCompanies.filter(slug => !['pay-and-play'].includes(slug)).map(slug => (
+        <Route key={slug} path={`/${slug}`} element={<CompanyDashboard />} />
+      ))}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -75,7 +82,7 @@ const AuthenticatedApp = () => {
           <Route path="/welcome" element={<WelcomeXedruo />} />
           <Route path="/parent-company" element={<ParentCompany />} />
           <Route path="/developer-workstation" element={<DeveloperWorkstation />} />
-          {/* Existing Music Distribution platform — intentionally left untouched. */}
+          {/* Existing Music Distribution platform — intentionally untouched. */}
           <Route path="/distribution" element={<Distribution />} />
           <Route path="/promotion" element={<Promotion />} />
           <Route path="/producer-suite" element={<ProducerSuite />} />
