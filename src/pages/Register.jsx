@@ -11,16 +11,24 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { ensureXedruoId, saveCustomerContact } from "@/lib/xedruoIdentity";
 
+const countries = [
+  ["NG", "Nigeria (+234)"], ["GH", "Ghana (+233)"], ["KE", "Kenya (+254)"], ["ZA", "South Africa (+27)"],
+  ["US", "United States (+1)"], ["GB", "United Kingdom (+44)"], ["CA", "Canada (+1)"], ["AE", "UAE (+971)"],
+];
+
 export default function Register() {
   const location = useLocation();
   const company = new URLSearchParams(location.search).get("company");
   const destination = company ? `/company/${encodeURIComponent(company)}` : "/welcome";
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState(""); const [country, setCountry] = useState("NG"); const [phone, setPhone] = useState("");
-  const [error, setError] = useState(""); const [loading, setLoading] = useState(false); const [showOtp, setShowOtp] = useState(false); const [otpCode, setOtpCode] = useState("");
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState("");
+  const [country, setCountry] = useState("NG"); const [phone, setPhone] = useState(""); const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); const [showOtp, setShowOtp] = useState(false); const [otpCode, setOtpCode] = useState("");
 
+  const validateContact = () => { if (!country || !phone.trim()) { setError("Country and phone number are required"); return false; } return true; };
   const handleSubmit = async (e) => {
     e.preventDefault(); setError("");
-    if (!country || !phone.trim()) { setError("Country and phone number are required"); return; }\n    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
+    if (!validateContact()) return;
+    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
     setLoading(true);
     try { await xedruo.auth.register({ email, password }); setShowOtp(true); }
     catch (err) { setError(err.message || "Registration failed"); }
@@ -32,13 +40,11 @@ export default function Register() {
     catch (err) { setError(err.message || "Invalid verification code"); }
     finally { setLoading(false); }
   };
-  const handleResend = async () => {
-    setError(""); try { await xedruo.auth.resendOtp(email); toast({ title: "Code sent", description: "Check your email for the new code." }); }
-    catch (err) { setError(err.message || "Failed to resend code"); }
-  };
+  const handleResend = async () => { setError(""); try { await xedruo.auth.resendOtp(email); toast({ title: "Code sent", description: "Check your email for the new code." }); } catch (err) { setError(err.message || "Failed to resend code"); } };
   const handleGoogle = async () => {
-    setError(""); try { await xedruo.auth.loginWithProvider("google", destination); }
-    catch (err) { setError(err.message || "Google sign-up failed"); }
+    setError(""); if (!validateContact()) return;
+    localStorage.setItem("xedruo_pending_contact", JSON.stringify({ countryCode: country, phoneE164: phone.trim() }));
+    try { await xedruo.auth.loginWithProvider("google", destination); } catch (err) { setError(err.message || "Google sign-up failed"); }
   };
 
   if (showOtp) return <AuthLayout icon={Mail} title="Verify your email" subtitle={`We sent a code to ${email}`}>
@@ -51,16 +57,17 @@ export default function Register() {
   return <AuthLayout icon={UserPlus} title="Create your account" subtitle={company ? `Create your ${company} account` : "Sign up to get started"} footer={<>
     Already have an account? <Link to={`/login${company ? `?company=${encodeURIComponent(company)}` : ""}`} className="text-primary font-medium hover:underline">Log in</Link>
   </>}>
-    <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2" />Continue with Google</Button>
-    <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"/></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or</span></div></div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div className="space-y-2"><Label htmlFor="country">Country</Label><select id="country" value={country} onChange={e=>setCountry(e.target.value)} className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></div>
+      <div className="space-y-2"><Label htmlFor="phone">Phone number</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="phone" type="tel" autoComplete="tel" placeholder="+2348012345678" value={phone} onChange={e=>setPhone(e.target.value)} className="pl-10 h-12" required/></div></div>
+    </div>
+    <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2"/>Continue with Google</Button>
+    <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"/></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or email & password</span></div></div>
     {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2"><Label htmlFor="country">Country</Label><select id="country" value={country} onChange={(e)=>setCountry(e.target.value)} className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm"><option value="NG">Nigeria (+234)</option><option value="GH">Ghana (+233)</option><option value="KE">Kenya (+254)</option><option value="ZA">South Africa (+27)</option><option value="US">United States (+1)</option><option value="GB">United Kingdom (+44)</option><option value="CA">Canada (+1)</option><option value="AE">UAE (+971)</option></select></div>
-        <div className="space-y-2"><Label htmlFor="phone">Phone number</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true"/><Input id="phone" type="tel" autoComplete="tel" placeholder="+2348012345678" value={phone} onChange={(e)=>setPhone(e.target.value)} className="pl-10 h-12" required/></div></div>
-      </div><form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true"/><Input id="email" type="email" autoComplete="email" autoFocus placeholder="you@example.com" value={email} onChange={(e)=>setEmail(e.target.value)} className="pl-10 h-12" required/></div></div>
-      <div className="space-y-2"><Label htmlFor="password">Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true"/><Input id="password" type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={(e)=>setPassword(e.target.value)} className="pl-10 h-12" required/></div></div>
-      <div className="space-y-2"><Label htmlFor="confirm">Confirm Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true"/><Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} className="pl-10 h-12" required/></div></div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} className="pl-10 h-12" required/></div></div>
+      <div className="space-y-2"><Label htmlFor="password">Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="password" type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} className="pl-10 h-12" required/></div></div>
+      <div className="space-y-2"><Label htmlFor="confirm">Confirm Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} className="pl-10 h-12" required/></div></div>
       <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Creating account...</> : "Create account"}</Button>
     </form>
   </AuthLayout>;
