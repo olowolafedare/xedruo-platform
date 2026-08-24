@@ -63,3 +63,10 @@ export async function getLinkedCompanies() {
   if (error) throw error;
   return (data || []).map((row) => row.xedruo_companies?.slug).filter(Boolean);
 }
+
+export async function saveCustomerContact({ countryCode, phoneE164 }) {
+  const me = await xedruo.auth.me();
+  const { error } = await supabase.from('xedruo_customer_profiles').update({ country_code: countryCode, phone_e164: phoneE164, updated_at: new Date().toISOString() }).eq('user_id', me.id);
+  if (error) throw error;
+  return ensureXedruoId();
+}
