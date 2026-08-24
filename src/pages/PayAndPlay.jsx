@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";\nimport { xedruo, supabase } from "@/api/xedruoClient";\nimport { ensureXedruoId } from "@/lib/xedruoIdentity";
 import {
   Play, Pause, Search, Heart, Ticket, Calendar, MapPin,
   ChevronLeft, ShoppingBag, Star, Download, Plus
@@ -35,9 +35,9 @@ export default function PayAndPlay() {
   const [playing, setPlaying] = useState(null);
   const [cart, setCart] = useState([]);
   const [bookArtist, setBookArtist] = useState(null);
-  const [bookEvent, setBookEvent] = useState(null);
+  const [bookEvent, setBookEvent] = useState(null);\n  const [accountNumber, setAccountNumber] = useState(null);\n  const [balance, setBalance] = useState(0);\n  const [myLoading, setMyLoading] = useState(false);
 
-  const filteredArtists = artists.filter(
+  const openMy = async () => {\n    setTab("my"); setMyLoading(true);\n    try { const result = await ensureXedruoId(); setAccountNumber(result.xedruoId); const me = await xedruo.auth.me(); const { data } = await supabase.from("wallets").select("balance").eq("user_id", me.id).maybeSingle(); setBalance(Number(data?.balance || 0)); } catch {} finally { setMyLoading(false); }\n  };\n\n  const filteredArtists = artists.filter(
     (a) => a.name.toLowerCase().includes(query.toLowerCase()) || a.genre.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -67,11 +67,11 @@ export default function PayAndPlay() {
             { k: "discover", l: "Discover" },
             { k: "events", l: "Tickets" },
             { k: "store", l: "Store" },
-            { k: "wallet", l: "Wallet" },
+            { k: "wallet", l: "Wallet" },\n            { k: "my", l: "My" },
           ].map((t) => (
             <button
               key={t.k}
-              onClick={() => setTab(t.k)}
+              onClick={() => t.k === "my" ? openMy() : setTab(t.k)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
                 tab === t.k ? "bg-emerald-500 text-emerald-950" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -199,7 +199,7 @@ export default function PayAndPlay() {
           </div>
         )}
 
-        {tab === "wallet" && (
+\n        {tab === "my" && (\n          <div className="max-w-xl mx-auto space-y-5">\n            <div className="rounded-3xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-900 text-white shadow-xl">\n              <div className="text-xs opacity-80">Xedruo account</div>\n              <div className="text-3xl font-mono font-bold tracking-widest mt-2">{myLoading ? "••••••••••" : (accountNumber || "—")}</div>\n              <div className="text-xs opacity-75 mt-2">Your 10-digit Xedruo account number</div>\n              <div className="mt-6 text-xs opacity-80">Local balance</div>\n              <div className="text-4xl font-display font-bold mt-1">₦{balance.toLocaleString("en-NG", {minimumFractionDigits:2, maximumFractionDigits:2})}</div>\n            </div>\n            <div className="grid grid-cols-2 gap-3">\n              <Button className="h-12 bg-emerald-500 hover:bg-emerald-400 text-emerald-950"><Plus className="w-4 h-4 mr-2" /> Add money</Button>\n              <Button variant="outline" className="h-12">Send / Pay</Button>\n            </div>\n            <div className="rounded-2xl bg-card border border-border p-5">\n              <h3 className="font-display font-semibold">My Xedruo services</h3>\n              <p className="text-sm text-muted-foreground mt-1">One Xedruo identity works across every service and company.</p>\n            </div>\n          </div>\n        )}\n\n        {tab === "wallet" && (
           <div className="max-w-md mx-auto space-y-4">
             <div className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-800 text-emerald-50">
               <div className="text-xs opacity-80">Available balance</div>
