@@ -8,6 +8,10 @@ function generateCandidate() {
 }
 
 export async function ensureXedruoId() {
+  const { data: customerProfile } = await supabase.rpc('ensure_xedruo_customer_profile');
+  if (customerProfile?.xedruo_account_number) {
+    return { xedruoId: customerProfile.xedruo_account_number, created: false };
+  }
   const me = await xedruo.auth.me();
   const { data: existing, error: readError } = await supabase
     .from('xedruo_identity')
