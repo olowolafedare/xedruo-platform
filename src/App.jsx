@@ -20,6 +20,7 @@ import Ecosystem from './pages/Ecosystem';
 import Management from './pages/Management';
 import CompanyDashboard from './pages/CompanyDashboard';
 import WelcomeXedruo from './pages/WelcomeXedruo';
+import AdomLanding from './pages/AdomLanding';
 
 const Distribution = lazy(() => import('./pages/Distribution'));
 const Promotion = lazy(() => import('./pages/Promotion'));
@@ -61,9 +62,9 @@ const AuthenticatedApp = () => {
   }
   return <Suspense fallback={<Loading />}><Routes>
     <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} /><Route path="/ecosystem" element={<Ecosystem />} />
-    <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} /><Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} /><Route path="/company/:slug" element={<CompanyDashboard />} />
-    <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} />
-    {independentCompanies.filter(slug => slug !== 'pay-and-play').map(slug => <Route key={slug} path={`/${slug}`} element={<CompanyDashboard />} />)}
+    <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} /><Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} /><Route path="/company/adom" element={<Navigate to="/adom" replace />} /><Route path="/company/:slug" element={<CompanyDashboard />} />
+    <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} />
+    {independentCompanies.filter(slug => slug !== 'pay-and-play' && slug !== 'adom').map(slug => <Route key={slug} path={`/${slug}`} element={<CompanyDashboard />} />)}
     <Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><ParentCompany /></ProtectedRoute>} />
     <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}><Route element={<DashboardLayout />}>
