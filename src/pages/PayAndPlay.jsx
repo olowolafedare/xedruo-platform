@@ -1,296 +1,74 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";\nimport { xedruo, supabase } from "@/api/xedruoClient";\nimport { ensureXedruoId } from "@/lib/xedruoIdentity";
-import {
-  Play, Pause, Search, Heart, Ticket, Calendar, MapPin,
-  ChevronLeft, ShoppingBag, Star, Download, Plus
-} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { xedruo, supabase } from "@/api/xedruoClient";
+import { ensureXedruoId } from "@/lib/xedruoIdentity";
+import { Play, Pause, Search, Heart, Ticket, Calendar, MapPin, ChevronLeft, ShoppingBag, Star, Plus, Send, Wallet, Grid2X2, Music2, X, Headphones, Mic2, Radio, UserRound, ArrowUpRight, Copy, Check, Globe2, Sparkles, BriefcaseBusiness, GraduationCap, Truck, Home, Zap, Activity, Trophy, Sprout, Stethoscope, Building2, Megaphone, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const artists = [
-  { id: "a1", name: "Lunar Ave", genre: "Afro-Fusion", rating: 4.9, fee: 2500, img: "https://images.unsplash.com/photo-1516280440614-3795a0b8254e?w=400&q=70", monthly: 18400 },
-  { id: "a2", name: "Mara Sound", genre: "Soul / R&B", rating: 4.8, fee: 3200, img: "https://images.unsplash.com/photo-1534580793956-78c2c66e9d8a?w=400&q=70", monthly: 22100 },
-  { id: "a3", name: "Kobe Drift", genre: "Hip-Hop", rating: 4.7, fee: 4000, img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&q=70", monthly: 30900 },
-  { id: "a4", name: "Nneka Blues", genre: "Blues", rating: 5.0, fee: 2800, img: "https://images.unsplash.com/photo-1483412468200-72182dc777c7?w=400&q=70", monthly: 15600 },
-  { id: "a5", name: "Echo Ray", genre: "Electronic", rating: 4.6, fee: 3500, img: "https://images.unsplash.com/photo-1517087125658-9b4f6c6b5868?w=400&q=70", monthly: 27300 },
-  { id: "a6", name: "Tola Vibes", genre: "Afrobeats", rating: 4.9, fee: 5000, img: "https://images.unsplash.com/photo-1504703395950-b8914a0c673e?w=400&q=70", monthly: 41200 },
+  { id: "a1", name: "Lunar Ave", genre: "Afro-Fusion", rating: 4.9, fee: 2500, img: "https://images.unsplash.com/photo-1516280440614-3795a0b8254e?w=600&q=80" },
+  { id: "a2", name: "Mara Sound", genre: "Soul / R&B", rating: 4.8, fee: 3200, img: "https://images.unsplash.com/photo-1534580793956-78c2c66e9d8a?w=600&q=80" },
+  { id: "a3", name: "Kobe Drift", genre: "Hip-Hop", rating: 4.7, fee: 4000, img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80" },
+  { id: "a4", name: "Nneka Blues", genre: "Blues", rating: 5.0, fee: 2800, img: "https://images.unsplash.com/photo-1483412468200-72182dc777c7?w=600&q=80" },
+  { id: "a5", name: "Echo Ray", genre: "Electronic", rating: 4.6, fee: 3500, img: "https://images.unsplash.com/photo-1517087125658-9b4f6c6b5868?w=600&q=80" },
+  { id: "a6", name: "Tola Vibes", genre: "Afrobeats", rating: 4.9, fee: 5000, img: "https://images.unsplash.com/photo-1504703395950-b8914a0c673e?w=600&q=80" },
 ];
-
+const tracks = [
+  { id: "t1", title: "Midnight Signal", artist: "Lunar Ave", genre: "Afro-Fusion" }, { id: "t2", title: "Golden Hour", artist: "Tola Vibes", genre: "Afrobeats" },
+  { id: "t3", title: "After Rain", artist: "Mara Sound", genre: "Soul / R&B" }, { id: "t4", title: "City Lights", artist: "Kobe Drift", genre: "Hip-Hop" },
+];
 const events = [
-  { id: "e1", title: "Afro Nights Live", artist: "Tola Vibes", date: "Sep 12", venue: "Eko Convention Centre", price: 25, img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=70" },
-  { id: "e2", title: "Soul Sundown", artist: "Mara Sound", date: "Sep 20", venue: "Freedom Park", price: 18, img: "https://images.unsplash.com/photo-1501386761578-eac5c94b214a?w=600&q=70" },
-  { id: "e3", title: "Electronic Garden", artist: "Echo Ray", date: "Oct 03", venue: "Muri Okunola Park", price: 32, img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=70" },
+  { id: "e1", title: "Afro Nights Live", artist: "Tola Vibes", date: "Sep 12", venue: "Eko Convention Centre", price: 25, img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=700&q=80" },
+  { id: "e2", title: "Soul Sundown", artist: "Mara Sound", date: "Sep 20", venue: "Freedom Park", price: 18, img: "https://images.unsplash.com/photo-1501386761578-eac5c94b214a?w=700&q=80" },
+  { id: "e3", title: "Electronic Garden", artist: "Echo Ray", date: "Oct 03", venue: "Muri Okunola Park", price: 32, img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=700&q=80" },
 ];
-
 const merch = [
-  { id: "m1", name: "Lunar Ave Tee", price: 35, img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&q=70" },
-  { id: "m2", name: "Tola Vibes Sneakers", price: 120, img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=70" },
-  { id: "m3", name: "Echo Ray Tote", price: 28, img: "https://images.unsplash.com/photo-1591561954557-2694c697f3ba?w=300&q=70" },
-  { id: "m4", name: "Mara Sound Belt", price: 45, img: "https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=300&q=70" },
+  { id: "m1", name: "Lunar Ave Tee", price: 35, img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80" }, { id: "m2", name: "Tola Vibes Sneakers", price: 120, img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80" },
+  { id: "m3", name: "Echo Ray Tote", price: 28, img: "https://images.unsplash.com/photo-1591561954557-2694c697f3ba?w=400&q=80" }, { id: "m4", name: "Mara Sound Belt", price: 45, img: "https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=400&q=80" },
 ];
+const services = [
+  ["Music Distribution", "distribution", Music2], ["Sportruo", "sportruo", Trophy], ["Hireuo", "hireuo", BriefcaseBusiness], ["Adom", "adom", Megaphone],
+  ["Agruo", "agruo", Sprout], ["Healthruo", "healthruo", Stethoscope], ["Education", "education", GraduationCap], ["Capital", "capital", Banknote],
+  ["Energy", "energy", Zap], ["Logistics", "logistics", Truck], ["Properties", "properties", Home], ["Spacetruo", "spacetruo", Building2],
+];
+const currencies = {
+  NG: { symbol: "₦", locale: "en-NG", name: "Nigerian Naira" }, GH: { symbol: "₵", locale: "en-GH", name: "Ghanaian Cedi" }, KE: { symbol: "KSh", locale: "en-KE", name: "Kenyan Shilling" },
+  ZA: { symbol: "R", locale: "en-ZA", name: "South African Rand" }, US: { symbol: "$", locale: "en-US", name: "US Dollar" }, GB: { symbol: "£", locale: "en-GB", name: "British Pound" },
+  CA: { symbol: "C$", locale: "en-CA", name: "Canadian Dollar" }, AE: { symbol: "د.إ", locale: "en-AE", name: "UAE Dirham" },
+};
 
 export default function PayAndPlay() {
-  const [tab, setTab] = useState("discover");
-  const [query, setQuery] = useState("");
-  const [playing, setPlaying] = useState(null);
-  const [cart, setCart] = useState([]);
-  const [bookArtist, setBookArtist] = useState(null);
-  const [bookEvent, setBookEvent] = useState(null);\n  const [accountNumber, setAccountNumber] = useState(null);\n  const [balance, setBalance] = useState(0);\n  const [myLoading, setMyLoading] = useState(false);
-
-  const openMy = async () => {\n    setTab("my"); setMyLoading(true);\n    try { const result = await ensureXedruoId(); setAccountNumber(result.xedruoId); const me = await xedruo.auth.me(); const { data } = await supabase.from("wallets").select("balance").eq("user_id", me.id).maybeSingle(); setBalance(Number(data?.balance || 0)); } catch {} finally { setMyLoading(false); }\n  };\n\n  const filteredArtists = artists.filter(
-    (a) => a.name.toLowerCase().includes(query.toLowerCase()) || a.genre.toLowerCase().includes(query.toLowerCase())
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-950 via-background to-background text-foreground pb-28">
-      {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/70 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
-          <Link to="/company/pay-bank" className="p-2 -ml-2 rounded-lg hover:bg-secondary">
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
-          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-xl">💳</div>
-          <div className="hidden sm:block">
-            <div className="font-display font-bold leading-none">Pay & Play</div>
-            <div className="text-[11px] text-muted-foreground">Bank · Book artists · Buy tickets</div>
-          </div>
-          <div className="flex-1 max-w-xs ml-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search artists…" className="pl-9 h-9 bg-secondary/60" />
-            </div>
-          </div>
-        </div>
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto pb-2">
-          {[
-            { k: "discover", l: "Discover" },
-            { k: "events", l: "Tickets" },
-            { k: "store", l: "Store" },
-            { k: "wallet", l: "Wallet" },\n            { k: "my", l: "My" },
-          ].map((t) => (
-            <button
-              key={t.k}
-              onClick={() => t.k === "my" ? openMy() : setTab(t.k)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                tab === t.k ? "bg-emerald-500 text-emerald-950" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.l}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {tab === "discover" && (
-          <div className="space-y-8">
-            <section>
-              <h2 className="text-xl font-display font-bold mb-4">Featured artists</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {filteredArtists.map((a) => (
-                  <div key={a.id} className="group rounded-xl bg-card border border-border overflow-hidden hover:border-emerald-500/50 transition">
-                    <div className="relative aspect-square">
-                      <img src={a.img} alt={a.name} className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => setPlaying(playing === a.id ? null : a.id)}
-                        className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-emerald-500 text-emerald-950 flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition shadow-lg"
-                      >
-                        {playing === a.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                      </button>
-                    </div>
-                    <div className="p-3">
-                      <div className="font-semibold text-sm truncate">{a.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{a.genre}</div>
-                      <div className="flex items-center gap-1 mt-1 text-xs text-amber-400">
-                        <Star className="w-3 h-3 fill-amber-400" /> {a.rating}
-                      </div>
-                      <Button
-                        size="sm"
-                        className="w-full mt-3 h-8 bg-emerald-500 hover:bg-emerald-400 text-emerald-950"
-                        onClick={() => setBookArtist(a)}
-                      >
-                        Book · ${a.fee.toLocaleString()}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-display font-bold mb-4">Upcoming events</h2>
-              <div className="grid sm:grid-cols-3 gap-4">
-                {events.map((e) => (
-                  <div key={e.id} className="rounded-xl bg-card border border-border overflow-hidden hover:border-emerald-500/50 transition">
-                    <div className="relative h-40">
-                      <img src={e.img} alt={e.title} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                      <div className="absolute bottom-2 left-3">
-                        <div className="font-semibold">{e.title}</div>
-                        <div className="text-xs text-white/80">{e.artist}</div>
-                      </div>
-                    </div>
-                    <div className="p-3 text-sm">
-                      <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
-                        <Calendar className="w-3.5 h-3.5" /> {e.date} · <MapPin className="w-3.5 h-3.5" /> {e.venue}
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-semibold text-emerald-400">${e.price}</span>
-                        <Button size="sm" className="h-8 bg-emerald-500 hover:bg-emerald-400 text-emerald-950" onClick={() => setBookEvent(e)}>
-                          <Ticket className="w-3.5 h-3.5 mr-1" /> Buy ticket
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {tab === "events" && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {events.concat(events).map((e, i) => (
-              <div key={i} className="rounded-xl bg-card border border-border overflow-hidden">
-                <img src={e.img} alt={e.title} className="w-full h-40 object-cover" />
-                <div className="p-4">
-                  <div className="font-semibold">{e.title}</div>
-                  <div className="text-sm text-muted-foreground">{e.artist}</div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
-                    <Calendar className="w-3.5 h-3.5" /> {e.date} · <MapPin className="w-3.5 h-3.5" /> {e.venue}
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="font-bold text-emerald-400">${e.price}</span>
-                    <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950" onClick={() => setBookEvent(e)}>
-                      Buy ticket
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === "store" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-display font-bold">Artist store</h2>
-              {cart.length > 0 && (
-                <span className="text-sm text-emerald-400">{cart.length} item(s) · ${cart.reduce((s, m) => s + m.price, 0)}</span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {merch.map((m) => (
-                <div key={m.id} className="rounded-xl bg-card border border-border overflow-hidden hover:border-emerald-500/40 transition">
-                  <img src={m.img} alt={m.name} className="w-full aspect-square object-cover" />
-                  <div className="p-3">
-                    <div className="text-sm font-medium truncate">{m.name}</div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="font-semibold text-emerald-400">${m.price}</span>
-                      <Button size="sm" variant="outline" className="h-8" onClick={() => setCart((c) => [...c, m])}>
-                        <Plus className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-\n        {tab === "my" && (\n          <div className="max-w-xl mx-auto space-y-5">\n            <div className="rounded-3xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-900 text-white shadow-xl">\n              <div className="text-xs opacity-80">Xedruo account</div>\n              <div className="text-3xl font-mono font-bold tracking-widest mt-2">{myLoading ? "••••••••••" : (accountNumber || "—")}</div>\n              <div className="text-xs opacity-75 mt-2">Your 10-digit Xedruo account number</div>\n              <div className="mt-6 text-xs opacity-80">Local balance</div>\n              <div className="text-4xl font-display font-bold mt-1">₦{balance.toLocaleString("en-NG", {minimumFractionDigits:2, maximumFractionDigits:2})}</div>\n            </div>\n            <div className="grid grid-cols-2 gap-3">\n              <Button className="h-12 bg-emerald-500 hover:bg-emerald-400 text-emerald-950"><Plus className="w-4 h-4 mr-2" /> Add money</Button>\n              <Button variant="outline" className="h-12">Send / Pay</Button>\n            </div>\n            <div className="rounded-2xl bg-card border border-border p-5">\n              <h3 className="font-display font-semibold">My Xedruo services</h3>\n              <p className="text-sm text-muted-foreground mt-1">One Xedruo identity works across every service and company.</p>\n            </div>\n          </div>\n        )}\n\n        {tab === "wallet" && (
-          <div className="max-w-md mx-auto space-y-4">
-            <div className="rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-800 text-emerald-50">
-              <div className="text-xs opacity-80">Available balance</div>
-              <div className="text-3xl font-display font-bold mt-1">$0.00</div>
-              <div className="text-xs opacity-70 mt-3">Xedruo Pay/Bank · USD</div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-12"><Download className="w-4 h-4 mr-2" /> Receive</Button>
-              <Button className="h-12 bg-emerald-500 hover:bg-emerald-400 text-emerald-950"><ShoppingBag className="w-4 h-4 mr-2" /> Pay</Button>
-            </div>
-            <div className="rounded-xl bg-card border border-border p-4">
-              <div className="text-sm font-medium mb-2">Recent transactions</div>
-              <div className="text-sm text-muted-foreground py-6 text-center">No transactions yet.</div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Now playing bar — Spotify-like */}
-      {playing && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-border">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
-            <img src={artists.find((a) => a.id === playing)?.img} className="w-10 h-10 rounded-md object-cover" alt="" />
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{artists.find((a) => a.id === playing)?.name}</div>
-              <div className="text-xs text-muted-foreground truncate">{artists.find((a) => a.id === playing)?.genre}</div>
-            </div>
-            <button onClick={() => setPlaying(null)} className="ml-auto w-10 h-10 rounded-full bg-emerald-500 text-emerald-950 flex items-center justify-center">
-              <Pause className="w-4 h-4" />
-            </button>
-            <button className="p-2 text-muted-foreground hover:text-foreground"><Heart className="w-5 h-5" /></button>
-          </div>
-        </div>
-      )}
-
-      {/* Booking modal — artist */}
-      {bookArtist && (
-        <BookingModal
-          title={`Book ${bookArtist.name}`}
-          subtitle={`${bookArtist.genre} · ${bookArtist.rating}★`}
-          price={bookArtist.fee}
-          onClose={() => setBookArtist(null)}
-        />
-      )}
-      {bookEvent && (
-        <BookingModal
-          title={bookEvent.title}
-          subtitle={`${bookEvent.artist} · ${bookEvent.date} · ${bookEvent.venue}`}
-          price={bookEvent.price}
-          cta="Buy ticket"
-          onClose={() => setBookEvent(null)}
-        />
-      )}
-    </div>
-  );
+  const [tab, setTab] = useState("home"); const [query, setQuery] = useState(""); const [playing, setPlaying] = useState(null); const [cart, setCart] = useState([]);
+  const [accountNumber, setAccountNumber] = useState(null); const [balance, setBalance] = useState(0); const [country, setCountry] = useState("NG"); const [showPlayer, setShowPlayer] = useState(false); const [copied, setCopied] = useState(false);
+  const money = currencies[country] || currencies.NG;
+  useEffect(() => { (async () => { try { const id = await ensureXedruoId(); setAccountNumber(id.xedruoId); const me = await xedruo.auth.me(); const { data: profile } = await supabase.from("xedruo_customer_profiles").select("country_code").eq("user_id", me.id).maybeSingle(); if (profile?.country_code) setCountry(profile.country_code); const { data: wallet } = await supabase.from("wallets").select("balance").eq("user_id", me.id).maybeSingle(); setBalance(Number(wallet?.balance || 0)); } catch (_) {} })(); }, []);
+  const filteredArtists = useMemo(() => artists.filter(a => `${a.name} ${a.genre}`.toLowerCase().includes(query.toLowerCase())), [query]);
+  const currentTrack = tracks.find(t => t.id === playing) || tracks[0];
+  const fmt = value => `${money.symbol}${Number(value).toLocaleString(money.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const copyAccount = async () => { if (accountNumber) { await navigator.clipboard?.writeText(accountNumber); setCopied(true); setTimeout(() => setCopied(false), 1400); } };
+  const toggleTrack = id => { setPlaying(playing === id ? null : id); setShowPlayer(true); };
+  return <div className="min-h-screen bg-[#f6f8f7] text-slate-900 pb-28">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100"><div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-3"><Link to="/company/pay-bank" className="p-2 rounded-xl hover:bg-slate-100"><ChevronLeft className="w-5 h-5" /></Link><div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center"><Music2 className="w-5 h-5" /></div><div><div className="font-bold">Xedruo Pay & Play</div><div className="text-[11px] text-slate-500">Money · Music · Services</div></div><div className="ml-auto relative hidden sm:block"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search music, artists, services" className="pl-9 w-64 h-10 bg-slate-50 border-0" /></div><button className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"><UserRound className="w-5 h-5" /></button></div></header>
+    <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+      {tab === "home" && <>
+        <section className="rounded-[28px] p-6 sm:p-8 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-800 text-white shadow-xl overflow-hidden relative"><div className="absolute -right-20 -top-20 w-72 h-72 rounded-full border-[40px] border-white/10" /><div className="flex items-center justify-between relative"><div><div className="text-sm text-white/75">Total balance</div><div className="text-4xl sm:text-5xl font-bold mt-2">{fmt(balance)}</div><div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs"><Globe2 className="w-3.5 h-3.5" /> {money.name}</div></div><div className="rounded-full bg-white/15 px-3 py-1 text-sm">↗ +2.4%</div></div><div className="mt-8 pt-4 border-t border-white/15 flex items-center gap-2 text-sm"><span className="opacity-75">Xedruo Account</span><span className="font-mono font-semibold tracking-widest">{accountNumber || "••••••••••"}</span><button onClick={copyAccount} className="p-1">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</button></div></section>
+        <section className="bg-white rounded-[26px] p-4 grid grid-cols-4 gap-2 shadow-sm border border-slate-100">{[[Send,"Send"],[Plus,"Add Money"],[Wallet,"Pay"],[Grid2X2,"More"]].map(([Icon,label]) => <button key={label} onClick={() => label === "More" && setTab("services")} className="py-3 rounded-2xl hover:bg-emerald-50 flex flex-col items-center gap-2"><span className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center"><Icon className="w-5 h-5" /></span><span className="text-xs sm:text-sm font-medium">{label}</span></button>)}</section>
+        <section className="bg-white rounded-[26px] p-5 shadow-sm border border-slate-100 grid grid-cols-3 gap-3 text-center">{["To Xedruo","To Bank","Withdraw"].map((label,i)=><button key={label} className="py-3 rounded-2xl hover:bg-slate-50"><div className="mx-auto w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">{i===0?<Send className="w-5 h-5"/>:i===1?<Building2 className="w-5 h-5"/>:<ArrowUpRight className="w-5 h-5"/>}</div><div className="mt-2 font-medium text-sm">{label}</div></button>)}</section>
+        <section className="rounded-[26px] bg-white p-5 shadow-sm border border-slate-100"><div className="flex items-center justify-between mb-4"><div><h2 className="font-bold text-lg">Xedruo services</h2><p className="text-xs text-slate-500">One account across the Xedruo ecosystem</p></div><button onClick={()=>setTab("services")} className="text-sm text-emerald-600 font-semibold">See all</button></div><div className="grid grid-cols-4 sm:grid-cols-6 gap-4">{services.map(([name,slug,Icon])=><Link key={slug} to={slug==="distribution"?"/distribution":`/company/${slug}`} className="flex flex-col items-center gap-2"><span className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><Icon className="w-5 h-5"/></span><span className="text-[11px] text-center text-slate-600">{name}</span></Link>)}</div></section>
+        <section className="rounded-[26px] bg-white p-5 shadow-sm border border-slate-100"><div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg">Music on Xedruo</h2><button onClick={()=>{setTab("music");setShowPlayer(true)}} className="text-sm text-emerald-600 font-semibold">Open Play</button></div><div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{tracks.slice(0,3).map(t=><button key={t.id} onClick={()=>toggleTrack(t.id)} className="p-3 rounded-2xl bg-slate-50 flex items-center gap-3 text-left"><span className="w-12 h-12 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center"><Play className="w-4 h-4"/></span><span className="min-w-0"><b className="block truncate">{t.title}</b><small className="text-slate-500">{t.artist}</small></span></button>)}</div></section>
+      </>}
+      {tab === "services" && <section><h1 className="text-2xl font-bold">All Xedruo services</h1><p className="text-sm text-slate-500 mt-1 mb-5">One Xedruo identity works across every service.</p><div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">{services.map(([name,slug,Icon])=><Link key={slug} to={slug==="distribution"?"/distribution":`/company/${slug}`} className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:border-emerald-300 transition"><span className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><Icon className="w-6 h-6"/></span><h3 className="font-bold mt-4">{name}</h3><p className="text-xs text-slate-500 mt-1">Open service</p></Link>)}</div></section>}
+      {tab === "music" && <MusicHub artists={filteredArtists} onPlay={toggleTrack}/>} {tab === "artists" && <ArtistHub artists={filteredArtists}/>} {tab === "tickets" && <TicketHub events={events}/>} {tab === "store" && <StoreHub merch={merch} cart={cart} setCart={setCart}/>} 
+    </main>
+    {showPlayer && <MusicPlayer currentTrack={currentTrack} playing={playing} onClose={()=>setShowPlayer(false)} onToggle={()=>toggleTrack(currentTrack.id)}/>} 
+    <button onClick={()=>{setTab("music");setShowPlayer(true)}} className="fixed right-5 bottom-24 z-50 w-16 h-16 rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-500/30 flex items-center justify-center border-4 border-white hover:scale-105 transition" aria-label="Open Xedruo Play"><Music2 className="w-7 h-7"/></button>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-100"><div className="max-w-6xl mx-auto h-20 grid grid-cols-5 items-center"><NavButton active={tab==="home"} onClick={()=>setTab("home")} icon={Activity} label="Home"/><NavButton active={tab==="artists"} onClick={()=>setTab("artists")} icon={Heart} label="Artists"/><NavButton active={tab==="services"} onClick={()=>setTab("services")} icon={Grid2X2} label="Services"/><NavButton active={tab==="tickets"} onClick={()=>setTab("tickets")} icon={Ticket} label="Tickets"/><NavButton active={tab==="store"} onClick={()=>setTab("store")} icon={ShoppingBag} label="Store"/></div></nav>
+  </div>;
 }
-
-function BookingModal({ title, subtitle, price, cta = "Confirm booking", onClose }) {
-  const [done, setDone] = useState(false);
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-card border border-border p-6" onClick={(e) => e.stopPropagation()}>
-        {done ? (
-          <div className="text-center py-6">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-3">
-              <Ticket className="w-7 h-7 text-emerald-400" />
-            </div>
-            <h3 className="font-display font-bold text-lg">Request received</h3>
-            <p className="text-sm text-muted-foreground mt-1">We'll confirm via your Xedruo notifications. No payment has been charged — payment provider configuration is required.</p>
-            <Button className="w-full mt-5 bg-emerald-500 hover:bg-emerald-400 text-emerald-950" onClick={onClose}>Done</Button>
-          </div>
-        ) : (
-          <>
-            <h3 className="font-display font-bold text-lg">{title}</h3>
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-            <div className="mt-4 space-y-3">
-              <Input placeholder="Event date" />
-              <Input placeholder="Location / venue" />
-              <Input placeholder="Notes for the artist" />
-            </div>
-            <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-secondary/60">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="font-bold text-emerald-400">${price.toLocaleString()}</span>
-            </div>
-            <Button className="w-full mt-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950" onClick={() => setDone(true)}>
-              {cta}
-            </Button>
-            <Button variant="ghost" className="w-full mt-2" onClick={onClose}>Cancel</Button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+function NavButton({active,onClick,icon:Icon,label}){return <button onClick={onClick} className={`flex flex-col items-center gap-1 text-xs ${active?"text-emerald-600":"text-slate-400"}`}><Icon className="w-5 h-5"/>{label}</button>}
+function MusicPlayer({currentTrack,playing,onClose,onToggle}){return <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center"><div className="w-full sm:max-w-xl bg-slate-950 text-white sm:rounded-3xl p-6 shadow-2xl"><div className="flex justify-between"><span className="text-xs text-emerald-400 uppercase tracking-widest">Xedruo Play</span><button onClick={onClose}><X/></button></div><div className="aspect-square max-w-sm mx-auto mt-5 rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-800 to-slate-900 flex items-center justify-center"><Headphones className="w-24 h-24 text-white/80"/></div><div className="mt-6"><div className="text-2xl font-bold">{currentTrack.title}</div><div className="text-slate-400">{currentTrack.artist} · {currentTrack.genre}</div></div><div className="mt-5 h-1 rounded-full bg-slate-800"><div className="h-1 w-1/3 rounded-full bg-emerald-400"/></div><div className="flex justify-center mt-5"><button onClick={onToggle} className="w-14 h-14 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">{playing?<Pause/>:<Play className="ml-1"/>}</button></div><div className="mt-6 text-xs text-slate-500">Music streaming, artist profiles, bookings, tickets, support and artist commerce live inside Xedruo Play.</div></div></div>}
+function MusicHub({artists,onPlay}){return <section className="space-y-6"><div><h1 className="text-3xl font-bold">Xedruo Play</h1><p className="text-slate-500">Xedruo-native music connected to your distribution ecosystem.</p></div><div className="bg-slate-950 rounded-3xl p-6 text-white"><div className="flex items-center gap-3"><Radio className="text-emerald-400"/><div><b>Listen & support</b><p className="text-xs text-slate-400">Xedruo Distribution and approved partner catalogs can feed this experience through the Xedruo Music API.</p></div></div></div><h2 className="font-bold text-lg">Artists</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{artists.map(a=><div key={a.id} className="bg-white rounded-2xl border border-slate-100 p-3"><img src={a.img} alt={a.name} className="w-full aspect-square object-cover rounded-xl"/><b className="block mt-2">{a.name}</b><span className="text-xs text-slate-500">{a.genre}</span><div className="grid grid-cols-3 gap-1 mt-2"><Button size="sm" className="bg-emerald-500 text-emerald-950" onClick={()=>onPlay("t1")}><Play className="w-3 h-3"/></Button><Button size="sm" variant="outline"><Heart className="w-3 h-3"/></Button><Button size="sm" variant="outline"><Mic2 className="w-3 h-3"/></Button></div></div>)}</div></section>}
+function ArtistHub({artists}){return <section><h1 className="text-2xl font-bold mb-4">Book & support artists</h1><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{artists.map(a=><div key={a.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm"><img src={a.img} alt={a.name} className="w-full h-48 object-cover"/><div className="p-4"><div className="flex justify-between"><div><b>{a.name}</b><p className="text-xs text-slate-500">{a.genre}</p></div><span className="text-amber-500 text-sm">★ {a.rating}</span></div><div className="grid grid-cols-3 gap-2 mt-4"><Button size="sm" className="bg-emerald-500 text-emerald-950">Book</Button><Button size="sm" variant="outline"><Heart className="w-3.5 h-3.5 mr-1"/>Support</Button><Button size="sm" variant="outline">Follow</Button></div></div></div>)}</div></section>}
+function TicketHub({events}){return <section><h1 className="text-2xl font-bold mb-4">Tickets</h1><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{events.map(e=><div key={e.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100"><img src={e.img} alt={e.title} className="w-full h-44 object-cover"/><div className="p-4"><b>{e.title}</b><p className="text-sm text-slate-500">{e.artist} · {e.date}</p><p className="text-xs text-slate-500 mt-1"><MapPin className="inline w-3.5 h-3.5"/> {e.venue}</p><Button className="w-full mt-4 bg-emerald-500 text-emerald-950"><Ticket className="w-4 h-4 mr-2"/>Buy ticket</Button></div></div>)}</div></section>}
+function StoreHub({merch,cart,setCart}){return <section><h1 className="text-2xl font-bold mb-4">Artist store</h1><div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{merch.map(m=><div key={m.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100"><img src={m.img} alt={m.name} className="w-full aspect-square object-cover"/><div className="p-3"><b className="text-sm">{m.name}</b><div className="flex justify-between items-center mt-2"><span className="text-emerald-600 font-bold">${m.price}</span><Button size="sm" onClick={()=>setCart(c=>[...c,m])}><Plus/></Button></div></div></div>)}</div>{cart.length>0&&<div className="mt-5 p-4 rounded-2xl bg-emerald-50 text-emerald-800">{cart.length} item(s) in your Xedruo cart.</div>}</section>}
