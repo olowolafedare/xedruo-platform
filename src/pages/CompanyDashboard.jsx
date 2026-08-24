@@ -5,7 +5,7 @@ import { ChevronLeft, Search, Bell, ArrowRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { xedruo } from "@/api/xedruoClient";
-import { ensureXedruoId, linkCompany } from "@/lib/xedruoIdentity";
+import { ensureXedruoId, linkCompany, saveCustomerContact } from "@/lib/xedruoIdentity";
 import { CheckCircle2, Link2 } from "lucide-react";
 
 // Per-company content blocks. Each company gets a hero + feature cards + an empty-state list.
