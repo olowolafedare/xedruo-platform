@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ensureXedruoId } from "@/lib/xedruoIdentity";
+import { ensureXedruoId, saveCustomerContact } from "@/lib/xedruoIdentity";
 import { Download, ArrowRight, Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
