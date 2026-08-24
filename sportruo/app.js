@@ -40,7 +40,7 @@ authForm?.addEventListener('submit', async (event) => {
   const email = document.querySelector('#authEmail').value.trim(); const password = document.querySelector('#authPassword').value; const fullName = document.querySelector('#authName').value.trim(); const role = document.querySelector('#authRole').value;
   try {
     const endpoint = authMode === 'signup' ? `${AUTH}/signup` : `${AUTH}/token?grant_type=password`;
-    const body = authMode === 'signup' ? { email, password, data: { full_name: fullName, sportruo_role: role } } : { email, password } : { email, password };
+    const body = authMode === 'signup' ? { email, password, data: { full_name: fullName, sportruo_role: role } } : { email, password };
     const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw new Error(data.msg || data.error_description || data.message || 'Authentication failed.');
     if (data.access_token) { saveSession(data); closeAuth(); updateAuthUI(data.user || decodeUser(data.access_token)); loadDashboardData(); }
