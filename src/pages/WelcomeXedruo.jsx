@@ -51,7 +51,7 @@ export default function WelcomeXedruo() {
             <h1 className="text-3xl font-display font-bold">Welcome to Xedruo</h1>
             <p className="text-muted-foreground mt-2 text-sm">
               {created
-                ? "Your Xedruo Bank account has been created automatically."
+                ? "Your Xedruo account has been created automatically."
                 : "Your existing Xedruo identity has been connected."}
             </p>
           </div>
