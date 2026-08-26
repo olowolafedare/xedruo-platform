@@ -77,9 +77,12 @@ const auth = {
   },
   redirectToLogin() { window.location.href = '/login'; },
   async loginWithProvider(provider, redirect = '/dashboard') {
+    const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
+    const callbackUrl = new URL('/auth/callback', window.location.origin);
+    callbackUrl.searchParams.set('redirect', safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}${redirect}` },
+      options: { redirectTo: callbackUrl.toString() },
     });
     if (error) throw new Error(error.message);
   },
