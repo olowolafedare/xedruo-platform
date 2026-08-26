@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { xedruo } from "@/api/xedruoClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,20 @@ import GoogleIcon from "@/components/GoogleIcon";
 
 export default function Login() {
   const location = useLocation();
+  const navigate = useNavigate();
   const company = new URLSearchParams(location.search).get("company");
   const destination = company ? `/company/${encodeURIComponent(company)}` : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Development builds already use the local Xedruo developer identity.
+  // Never start OAuth from the development login screen; doing so can redirect
+  // back to a localhost callback where no local server is running.
+  useEffect(() => {
+    if (import.meta.env.DEV) navigate(destination, { replace: true });
+  }, [destination, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(""); setLoading(true);
