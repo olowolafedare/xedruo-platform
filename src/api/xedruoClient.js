@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // Standalone Xedruo backend. Base44 is no longer used for authentication,
 // database, storage, or application runtime services.
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOdi5SnrLu2HA_GlvG0_av';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOdi5nG0v0f';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
