@@ -62,14 +62,16 @@ const AuthenticatedApp = () => {
     }
   }
   return <Suspense fallback={<Loading />}><Routes>
-    <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} /><Route path="/ecosystem" element={<Ecosystem />} />
+    <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} />
+    {/* Legacy ecosystem screens are retired; always use the current Group Landing. */}
+    <Route path="/ecosystem" element={<Navigate to="/" replace />} />
     <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} /><Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} /><Route path="/company/adom" element={<Navigate to="/adom" replace />} /><Route path="/company/:slug" element={<CompanyDashboard />} />
     <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} />
     {independentCompanies.filter(slug => slug !== 'pay-and-play' && slug !== 'adom').map(slug => <Route key={slug} path={`/${slug}`} element={<CompanyDashboard />} />)}
     <Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/auth/callback" element={<AuthCallback />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><ParentCompany /></ProtectedRoute>} />
     <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}><Route element={<DashboardLayout />}>
-      <Route path="/dashboard" element={<Ecosystem />} /><Route path="/welcome" element={<WelcomeXedruo />} /><Route path="/developer-workstation" element={<DeveloperWorkstation />} />
+      <Route path="/dashboard" element={<Navigate to="/" replace />} /><Route path="/welcome" element={<WelcomeXedruo />} /><Route path="/developer-workstation" element={<DeveloperWorkstation />} />
       <Route path="/distribution" element={<Distribution />} /><Route path="/promotion" element={<Promotion />} /><Route path="/producer-suite" element={<ProducerSuite />} /><Route path="/creator-payments" element={<CreatorPayments />} /><Route path="/sell-tickets" element={<SellTickets />} /><Route path="/invest" element={<Invest />} /><Route path="/publishing" element={<Publishing />} /><Route path="/royalties" element={<Royalties />} /><Route path="/label-dashboard" element={<LabelDashboard />} /><Route path="/artist-management" element={<ArtistManagement />} /><Route path="/creator-store" element={<CreatorStore />} /><Route path="/notifications" element={<Notifications />} /><Route path="/kyc" element={<KYC />} /><Route path="/support" element={<Support />} /><Route path="/admin/reports" element={<AdminReports />} /><Route path="/book-studio" element={<BookStudio />} /><Route path="/artist-catalog" element={<ArtistCatalog />} /><Route path="/artist/:id" element={<ArtistProfilePage />} />
     </Route></Route><Route path="*" element={<PageNotFound />} />
   </Routes></Suspense>;
