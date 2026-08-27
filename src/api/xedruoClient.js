@@ -3,10 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 // Standalone Xedruo backend. Base44 is no longer used for authentication,
 // database, storage, or application runtime services.
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOdi5nG0v0f';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOndi5nG0v0f';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
+
+const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
 
 const getProfile = async (user) => {
   if (!user) return null;
@@ -38,7 +40,7 @@ const auth = {
     return data;
   },
   async resendOtp(email) { const { data, error } = await supabase.auth.resend({ type: 'signup', email }); if (error) throw new Error(error.message); return data; },
-  async resetPasswordRequest(email) { const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` }); if (error) throw new Error(error.message); return true; },
+  async resetPasswordRequest(email) { const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${AUTH_PRODUCTION_ORIGIN}/reset-password` }); if (error) throw new Error(error.message); return true; },
   async resetPassword({ newPassword }) { const { data, error } = await supabase.auth.updateUser({ password: newPassword }); if (error) throw new Error(error.message); return data; },
   setToken() {},
   async updateMe(patch = {}) {
@@ -53,7 +55,9 @@ const auth = {
   redirectToLogin() { window.location.href = '/login'; },
   async loginWithProvider(provider, redirect = '/dashboard') {
     const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
-    const callbackUrl = new URL('/auth/callback', window.location.origin);
+    // OAuth must always return to the deployed Xedruo callback, even when
+    // the sign-in button was clicked from a local development build.
+    const callbackUrl = new URL('/auth/callback', AUTH_PRODUCTION_ORIGIN);
     callbackUrl.searchParams.set('redirect', safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl.toString() } });
     if (error) throw new Error(error.message);
