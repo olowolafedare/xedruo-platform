@@ -58,162 +58,42 @@ const XedruoPayBank = lazy(() => import('./pages/XedruoPayBank'))
 const DeveloperWorkstation = lazy(() => import('./pages/DeveloperWorkstation'))
 const ParentCompany = lazy(() => import('./pages/ParentCompany'))
 
-const operatingCompanies = [
-  'sportruo', 'hireuo', 'agruo', 'healthruo', 'education',
-  'capital', 'energy', 'logistics', 'properties', 'spacetruo'
-]
-
-const Loading = () => (
-  <div className="fixed inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-  </div>
-)
-
-const HealthruoEntry = () => {
-  const { user } = useAuth()
-  return user ? <HealthruoDataWorkspace /> : <HealthruoLanding />
-}
+const operatingCompanies = ['sportruo', 'hireuo', 'agruo', 'healthruo', 'education', 'capital', 'energy', 'logistics', 'properties', 'spacetruo']
+const Loading = () => (<div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /></div>)
+const HealthruoEntry = () => { const { user } = useAuth(); return user ? <HealthruoDataWorkspace /> : <HealthruoLanding /> }
 
 const AuthenticatedApp = () => {
-  const location = useLocation()
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
-
+  const location = useLocation(); const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
   if (isLoadingPublicSettings || isLoadingAuth) return <Loading />
-
   const isParentRoute = location.pathname === '/parent-company'
-  const publicCompanyRoutes =
-    location.pathname === '/' ||
-    location.pathname === '/company/music-distribution' ||
-    location.pathname === '/music-distribution' ||
-    location.pathname === '/company/pay-and-play' ||
-    location.pathname === '/pay-and-play' ||
-    location.pathname === '/company/adom' ||
-    location.pathname === '/adom' ||
-    location.pathname === '/xedruo-ai' ||
-    operatingCompanies.some(
-      slug => location.pathname === `/company/${slug}` || location.pathname === `/${slug}`
-    )
-
+  const publicCompanyRoutes = location.pathname === '/' || location.pathname === '/company/music-distribution' || location.pathname === '/music-distribution' || location.pathname === '/company/pay-and-play' || location.pathname === '/pay-and-play' || location.pathname === '/company/adom' || location.pathname === '/adom' || location.pathname === '/xedruo-ai' || operatingCompanies.some(slug => location.pathname === `/company/${slug}` || location.pathname === `/${slug}`)
   if (authError) {
-    if (isParentRoute) {
-      return authError.type === 'user_not_registered'
-        ? <ParentLogin />
-        : authError.type === 'auth_required'
-          ? <ParentLogin />
-          : <UserNotRegisteredError />
-    }
-
-    if (!publicCompanyRoutes) {
-      if (authError.type === 'user_not_registered') return <UserNotRegisteredError />
-      if (authError.type === 'auth_required') {
-        navigateToLogin()
-        return null
-      }
-    }
+    if (isParentRoute) return authError.type === 'user_not_registered' ? <ParentLogin /> : authError.type === 'auth_required' ? <ParentLogin /> : <UserNotRegisteredError />
+    if (!publicCompanyRoutes) { if (authError.type === 'user_not_registered') return <UserNotRegisteredError />; if (authError.type === 'auth_required') { navigateToLogin(); return null } }
   }
-
-  return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route path="/" element={<GroupLanding />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/ecosystem" element={<Navigate to="/" replace />} />
-        <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} />
-        <Route path="/company/music-distribution" element={<MusicDistributionLanding />} />
-        <Route path="/music-distribution" element={<MusicDistributionLanding />} />
-        <Route path="/company/adom" element={<Navigate to="/adom" replace />} />
-        <Route path="/company/sportruo" element={<SportruoLanding />} />
-        <Route path="/sportruo" element={<SportruoLanding />} />
-        <Route path="/company/hireuo" element={<HireuoLanding />} />
-        <Route path="/hireuo" element={<HireuoLanding />} />
-        <Route path="/hireuo/workspace" element={<HireuoWorkspace />} />
-        <Route path="/company/healthruo" element={<HealthruoEntry />} />
-        <Route path="/healthruo" element={<HealthruoEntry />} />
-        <Route path="/company/logistics" element={<LogisticsLanding />} />
-        <Route path="/logistics" element={<LogisticsLanding />} />
-        <Route path="/company/properties" element={<PropertiesLanding />} />
-        <Route path="/properties" element={<PropertiesLanding />} />
-        <Route path="/properties/workspace" element={<PropertiesWorkspace />} />
-        <Route path="/properties/list" element={<PropertiesList />} />
-        <Route path="/company/spacetruo" element={<SpaceTruoLanding />} />
-        <Route path="/spacetruo" element={<SpaceTruoLanding />} />
-        <Route path="/company/xedruo-ai" element={<XedruoAI />} />
-        <Route path="/xedruo-ai" element={<XedruoAI />} />
-
-        {operatingCompanies
-          .filter(slug => !['sportruo', 'hireuo', 'healthruo', 'logistics', 'properties', 'spacetruo'].includes(slug))
-          .map(slug => (
-            <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyLanding />} />
-          ))}
-        {operatingCompanies
-          .filter(slug => !['sportruo', 'hireuo', 'healthruo', 'logistics', 'properties', 'spacetruo'].includes(slug))
-          .map(slug => (
-            <Route key={slug} path={`/${slug}`} element={<OperatingCompanyLanding />} />
-          ))}
-
-        <Route path="/company/:slug" element={<CompanyDashboard />} />
-        <Route path="/management" element={<Management />} />
-        <Route path="/company/pay-bank" element={<XedruoPayBank />} />
-        <Route path="/pay-and-play" element={<PayAndPlay />} />
-        <Route path="/adom" element={<AdomLanding />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route
-          path="/parent-company"
-          element={
-            <ProtectedRoute unauthenticatedElement={<ParentLogin />}>
-              <ParentCompany />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/welcome" element={<WelcomeXedruo />} />
-            <Route path="/developer-workstation" element={<DeveloperWorkstation />} />
-            <Route path="/distribution" element={<Distribution />} />
-            <Route path="/promotion" element={<Promotion />} />
-            <Route path="/producer-suite" element={<ProducerSuite />} />
-            <Route path="/creator-payments" element={<CreatorPayments />} />
-            <Route path="/sell-tickets" element={<SellTickets />} />
-            <Route path="/invest" element={<Invest />} />
-            <Route path="/publishing" element={<Publishing />} />
-            <Route path="/royalties" element={<Royalties />} />
-            <Route path="/label-dashboard" element={<LabelDashboard />} />
-            <Route path="/artist-management" element={<ArtistManagement />} />
-            <Route path="/creator-store" element={<CreatorStore />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/kyc" element={<KYC />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/admin/reports" element={<AdminReports />} />
-            <Route path="/book-studio" element={<BookStudio />} />
-            <Route path="/artist-catalog" element={<ArtistCatalog />} />
-            <Route path="/artist/:id" element={<ArtistProfilePage />} />
-          </Route>
-        </Route>
-
-        <Route path="*" element={<PageNotFound />} />
-      </Routes>
-    </Suspense>
-  )
+  return (<Suspense fallback={<Loading />}><Routes>
+    <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} /><Route path="/ecosystem" element={<Navigate to="/" replace />} />
+    <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} /><Route path="/company/music-distribution" element={<MusicDistributionLanding />} /><Route path="/music-distribution" element={<MusicDistributionLanding />} /><Route path="/company/adom" element={<Navigate to="/adom" replace />} />
+    <Route path="/company/sportruo" element={<SportruoLanding />} /><Route path="/sportruo" element={<SportruoLanding />} /><Route path="/company/hireuo" element={<HireuoLanding />} /><Route path="/hireuo" element={<HireuoLanding />} /><Route path="/hireuo/workspace" element={<HireuoWorkspace />} />
+    <Route path="/company/healthruo" element={<HealthruoEntry />} /><Route path="/healthruo" element={<HealthruoEntry />} /><Route path="/company/logistics" element={<LogisticsLanding />} /><Route path="/logistics" element={<LogisticsLanding />} /><Route path="/company/properties" element={<PropertiesLanding />} /><Route path="/properties" element={<PropertiesLanding />} /><Route path="/properties/workspace" element={<PropertiesWorkspace />} /><Route path="/properties/list" element={<PropertiesList />} />
+    <Route path="/company/spacetruo" element={<SpaceTruoLanding />} /><Route path="/spacetruo" element={<SpaceTruoLanding />} /><Route path="/company/xedruo-ai" element={<XedruoAI />} /><Route path="/xedruo-ai" element={<XedruoAI />} />
+    {operatingCompanies.filter(slug => !['sportruo','hireuo','healthruo','logistics','properties','spacetruo'].includes(slug)).map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyLanding />} />)}
+    {operatingCompanies.filter(slug => !['sportruo','hireuo','healthruo','logistics','properties','spacetruo'].includes(slug)).map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyLanding />} />)}
+    <Route path="/company/:slug" element={<CompanyDashboard />} /><Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} /><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/auth/callback" element={<AuthCallback />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><ParentCompany /></ProtectedRoute>} />
+    <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}><Route element={<DashboardLayout />}><Route path="/dashboard" element={<Navigate to="/" replace />} /><Route path="/welcome" element={<WelcomeXedruo />} /><Route path="/developer-workstation" element={<DeveloperWorkstation />} /><Route path="/distribution" element={<Distribution />} /><Route path="/promotion" element={<Promotion />} /><Route path="/producer-suite" element={<ProducerSuite />} /><Route path="/creator-payments" element={<CreatorPayments />} /><Route path="/sell-tickets" element={<SellTickets />} /><Route path="/invest" element={<Invest />} /><Route path="/publishing" element={<Publishing />} /><Route path="/royalties" element={<Royalties />} /><Route path="/label-dashboard" element={<LabelDashboard />} /><Route path="/artist-management" element={<ArtistManagement />} /><Route path="/creator-store" element={<CreatorStore />} /><Route path="/notifications" element={<Notifications />} /><Route path="/kyc" element={<KYC />} /><Route path="/support" element={<Support />} /><Route path="/admin/reports" element={<AdminReports />} /><Route path="/book-studio" element={<BookStudio />} /><Route path="/artist-catalog" element={<ArtistCatalog />} /><Route path="/artist/:id" element={<ArtistProfilePage />} /></Route></Route>
+    <Route path="*" element={<PageNotFound />} />
+  </Routes></Suspense>)
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
-  )
+  // Local development must never become the public authentication origin.
+  // If a user opens a local build, immediately send them to production.
+  if (typeof window !== 'undefined' && ['localhost','127.0.0.1','0.0.0.0'].includes(window.location.hostname)) {
+    const production = new URL('https://xedruo-platform.vercel.app' + window.location.pathname + window.location.search + window.location.hash)
+    if (window.location.href !== production.toString()) window.location.replace(production.toString())
+    return <Loading />
+  }
+  return (<AuthProvider><QueryClientProvider client={queryClientInstance}><Router><ScrollToTop /><AuthenticatedApp /></Router><Toaster /></QueryClientProvider></AuthProvider>)
 }
-
 export default App
