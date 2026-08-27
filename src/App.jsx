@@ -19,8 +19,8 @@ import GroupLanding from './pages/GroupLanding';
 import Pricing from './pages/Pricing';
 import Management from './pages/Management';
 import CompanyDashboard from './pages/CompanyDashboard';
-import OperatingCompanyDashboard from './pages/OperatingCompanyDashboard';
-import MusicDistributionDashboard from './pages/MusicDistributionDashboard';
+import OperatingCompanyLanding from './pages/OperatingCompanyLanding';
+import MusicDistributionLanding from './pages/MusicDistributionLanding';
 import WelcomeXedruo from './pages/WelcomeXedruo';
 import AdomLanding from './pages/AdomLanding';
 
@@ -55,10 +55,10 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   if (isLoadingPublicSettings || isLoadingAuth) return <Loading />;
   const isParentRoute = location.pathname === '/parent-company';
-  const isPublicDashboardRoute = location.pathname === '/company/music-distribution' || location.pathname === '/music-distribution' || location.pathname === '/company/pay-and-play' || location.pathname === '/pay-and-play' || location.pathname === '/company/adom' || location.pathname === '/adom' || location.pathname === '/' || operatingCompanies.some(slug => location.pathname === `/company/${slug}` || location.pathname === `/${slug}`);
+  const publicCompanyRoutes = location.pathname === '/company/music-distribution' || location.pathname === '/music-distribution' || location.pathname === '/company/pay-and-play' || location.pathname === '/pay-and-play' || location.pathname === '/company/adom' || location.pathname === '/adom' || location.pathname === '/' || operatingCompanies.some(slug => location.pathname === `/company/${slug}` || location.pathname === `/${slug}`);
   if (authError) {
     if (isParentRoute) return authError.type === 'user_not_registered' ? <ParentLogin /> : authError.type === 'auth_required' ? <ParentLogin /> : <UserNotRegisteredError />;
-    if (!isPublicDashboardRoute) {
+    if (!publicCompanyRoutes) {
       if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
       if (authError.type === 'auth_required') { navigateToLogin(); return null; }
     }
@@ -67,11 +67,11 @@ const AuthenticatedApp = () => {
     <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} />
     <Route path="/ecosystem" element={<Navigate to="/" replace />} />
     <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} />
-    <Route path="/company/music-distribution" element={<MusicDistributionDashboard />} />
-    <Route path="/music-distribution" element={<MusicDistributionDashboard />} />
+    <Route path="/company/music-distribution" element={<MusicDistributionLanding />} />
+    <Route path="/music-distribution" element={<MusicDistributionLanding />} />
     <Route path="/company/adom" element={<Navigate to="/adom" replace />} />
-    {operatingCompanies.map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyDashboard />} />)}
-    {operatingCompanies.map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyDashboard />} />)}
+    {operatingCompanies.map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyLanding />} />)}
+    {operatingCompanies.map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyLanding />} />)}
     <Route path="/company/:slug" element={<CompanyDashboard />} />
     <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} />
     <Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/auth/callback" element={<AuthCallback />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
