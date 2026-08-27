@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/xedruoClient";
 import { ensureXedruoId, saveCustomerContact } from "@/lib/xedruoIdentity";
 
+const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
+
 function safeDestination(value) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
@@ -17,6 +19,14 @@ export default function AuthCallback() {
     let active = true;
     let subscription;
     const destination = safeDestination(searchParams.get("redirect"));
+
+    if (["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname)) {
+      const target = new URL("/auth/callback", PRODUCTION_ORIGIN);
+      target.searchParams.set("redirect", destination);
+      target.hash = window.location.hash;
+      window.location.replace(target.toString());
+      return () => { active = false; };
+    }
 
     const finish = async () => {
       try {
