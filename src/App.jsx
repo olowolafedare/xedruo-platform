@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import DashboardLayout from './components/app/DashboardLayout';
+import DashboardLayout from '@/components/app/DashboardLayout';
 import Login from './pages/Login';
 import ParentLogin from './pages/ParentLogin';
 import Register from './pages/Register';
@@ -20,6 +20,7 @@ import Pricing from './pages/Pricing';
 import Management from './pages/Management';
 import CompanyDashboard from './pages/CompanyDashboard';
 import OperatingCompanyDashboard from './pages/OperatingCompanyDashboard';
+import MusicDistributionDashboard from './pages/MusicDistributionDashboard';
 import WelcomeXedruo from './pages/WelcomeXedruo';
 import AdomLanding from './pages/AdomLanding';
 
@@ -54,20 +55,21 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   if (isLoadingPublicSettings || isLoadingAuth) return <Loading />;
   const isParentRoute = location.pathname === '/parent-company';
+  const isPublicDashboardRoute = location.pathname === '/company/music-distribution' || location.pathname === '/music-distribution' || location.pathname === '/company/pay-and-play' || location.pathname === '/pay-and-play' || location.pathname === '/company/adom' || location.pathname === '/adom' || location.pathname === '/' || operatingCompanies.some(slug => location.pathname === `/company/${slug}` || location.pathname === `/${slug}`);
   if (authError) {
-    if (authError.type === 'user_not_registered') return isParentRoute ? <ParentLogin /> : <UserNotRegisteredError />;
-    if (authError.type === 'auth_required') {
-      if (isParentRoute) return <ParentLogin />;
-      navigateToLogin(); return null;
+    if (isParentRoute) return authError.type === 'user_not_registered' ? <ParentLogin /> : authError.type === 'auth_required' ? <ParentLogin /> : <UserNotRegisteredError />;
+    if (!isPublicDashboardRoute) {
+      if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
+      if (authError.type === 'auth_required') { navigateToLogin(); return null; }
     }
   }
   return <Suspense fallback={<Loading />}><Routes>
     <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} />
     <Route path="/ecosystem" element={<Navigate to="/" replace />} />
     <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} />
-    <Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} />
+    <Route path="/company/music-distribution" element={<MusicDistributionDashboard />} />
+    <Route path="/music-distribution" element={<MusicDistributionDashboard />} />
     <Route path="/company/adom" element={<Navigate to="/adom" replace />} />
-    {/* Canonical operating-company dashboards. These routes are intentionally explicit so no legacy CompanyDashboard lookup can break them. */}
     {operatingCompanies.map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyDashboard />} />)}
     {operatingCompanies.map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyDashboard />} />)}
     <Route path="/company/:slug" element={<CompanyDashboard />} />
