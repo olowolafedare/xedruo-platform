@@ -8,6 +8,9 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 
+const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
+const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+
 export default function Login() {
   const location = useLocation();
   const company = new URLSearchParams(location.search).get("company");
@@ -25,9 +28,22 @@ export default function Login() {
   };
 
   const handleGoogle = async () => {
-    setError("");
-    try { await xedruo.auth.loginWithProvider("google", destination); }
-    catch (err) { setError(err.message || "Google sign-in failed"); }
+    setError(""); setLoading(true);
+    try {
+      // Never start Google OAuth from a local origin. Move the user to the
+      // production Xedruo login first so the complete authentication flow
+      // stays on the production domain.
+      if (isLocalHost) {
+        const target = new URL("/login", PRODUCTION_ORIGIN);
+        if (company) target.searchParams.set("company", company);
+        window.location.replace(target.toString());
+        return;
+      }
+      await xedruo.auth.loginWithProvider("google", destination);
+    } catch (err) {
+      setError(err.message || "Google sign-in failed");
+      setLoading(false);
+    }
   };
 
   return (
