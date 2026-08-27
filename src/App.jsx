@@ -17,9 +17,9 @@ import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 import GroupLanding from './pages/GroupLanding';
 import Pricing from './pages/Pricing';
-import Ecosystem from './pages/Ecosystem';
 import Management from './pages/Management';
 import CompanyDashboard from './pages/CompanyDashboard';
+import OperatingCompanyDashboard from './pages/OperatingCompanyDashboard';
 import WelcomeXedruo from './pages/WelcomeXedruo';
 import AdomLanding from './pages/AdomLanding';
 
@@ -46,7 +46,7 @@ const XedruoPayBank = lazy(() => import('./pages/XedruoPayBank'));
 const DeveloperWorkstation = lazy(() => import('./pages/DeveloperWorkstation'));
 const ParentCompany = lazy(() => import('./pages/ParentCompany'));
 
-const independentCompanies = ['pay-and-play','sportruo','hireuo','adom','agruo','healthruo','education','capital','energy','logistics','properties','spacetruo','xedruo-ai'];
+const operatingCompanies = ['sportruo','hireuo','agruo','healthruo','education','capital','energy','logistics','properties','spacetruo'];
 const Loading = () => <div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /></div>;
 
 const AuthenticatedApp = () => {
@@ -63,11 +63,15 @@ const AuthenticatedApp = () => {
   }
   return <Suspense fallback={<Loading />}><Routes>
     <Route path="/" element={<GroupLanding />} /><Route path="/pricing" element={<Pricing />} />
-    {/* Legacy ecosystem screens are retired; always use the current Group Landing. */}
     <Route path="/ecosystem" element={<Navigate to="/" replace />} />
-    <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} /><Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} /><Route path="/company/adom" element={<Navigate to="/adom" replace />} /><Route path="/company/:slug" element={<CompanyDashboard />} />
+    <Route path="/company/pay-and-play" element={<Navigate to="/pay-and-play" replace />} />
+    <Route path="/company/music-distribution" element={<Navigate to="/distribution" replace />} />
+    <Route path="/company/adom" element={<Navigate to="/adom" replace />} />
+    {/* Canonical operating-company dashboards. These routes are intentionally explicit so no legacy CompanyDashboard lookup can break them. */}
+    {operatingCompanies.map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyDashboard />} />)}
+    {operatingCompanies.map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyDashboard />} />)}
+    <Route path="/company/:slug" element={<CompanyDashboard />} />
     <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} />
-    {independentCompanies.filter(slug => slug !== 'pay-and-play' && slug !== 'adom').map(slug => <Route key={slug} path={`/${slug}`} element={<CompanyDashboard />} />)}
     <Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/auth/callback" element={<AuthCallback />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><ParentCompany /></ProtectedRoute>} />
     <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}><Route element={<DashboardLayout />}>
