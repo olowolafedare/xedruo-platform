@@ -20,6 +20,7 @@ import Pricing from './pages/Pricing';
 import Management from './pages/Management';
 import CompanyDashboard from './pages/CompanyDashboard';
 import OperatingCompanyLanding from './pages/OperatingCompanyLanding';
+import SportruoLanding from './pages/SportruoLanding';
 import MusicDistributionLanding from './pages/MusicDistributionLanding';
 import WelcomeXedruo from './pages/WelcomeXedruo';
 import AdomLanding from './pages/AdomLanding';
@@ -70,8 +71,10 @@ const AuthenticatedApp = () => {
     <Route path="/company/music-distribution" element={<MusicDistributionLanding />} />
     <Route path="/music-distribution" element={<MusicDistributionLanding />} />
     <Route path="/company/adom" element={<Navigate to="/adom" replace />} />
-    {operatingCompanies.map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyLanding />} />)}
-    {operatingCompanies.map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyLanding />} />)}
+    <Route path="/company/sportruo" element={<SportruoLanding />} />
+    <Route path="/sportruo" element={<SportruoLanding />} />
+    {operatingCompanies.filter(slug => slug !== 'sportruo').map(slug => <Route key={`company-${slug}`} path={`/company/${slug}`} element={<OperatingCompanyLanding />} />)}
+    {operatingCompanies.filter(slug => slug !== 'sportruo').map(slug => <Route key={slug} path={`/${slug}`} element={<OperatingCompanyLanding />} />)}
     <Route path="/company/:slug" element={<CompanyDashboard />} />
     <Route path="/management" element={<Management />} /><Route path="/company/pay-bank" element={<XedruoPayBank />} /><Route path="/pay-and-play" element={<PayAndPlay />} /><Route path="/adom" element={<AdomLanding />} />
     <Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/auth/callback" element={<AuthCallback />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
