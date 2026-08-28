@@ -14,7 +14,7 @@ const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.locati
 export default function Login() {
   const location = useLocation();
   const company = new URLSearchParams(location.search).get("company");
-  const destination = company ? `/company/${encodeURIComponent(company)}` : "/dashboard";
+  const destination = company ? `/company/${encodeURIComponent(company)}/dashboard` : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,9 +30,6 @@ export default function Login() {
   const handleGoogle = async () => {
     setError(""); setLoading(true);
     try {
-      // Never start Google OAuth from a local origin. Move the user to the
-      // production Xedruo login first so the complete authentication flow
-      // stays on the production domain.
       if (isLocalHost) {
         const target = new URL("/login", PRODUCTION_ORIGIN);
         if (company) target.searchParams.set("company", company);
