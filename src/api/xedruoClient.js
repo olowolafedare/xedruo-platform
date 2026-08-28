@@ -5,9 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOndi5nG0v0f';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  // OAuth callback is handled explicitly by AuthCallback.jsx. Disabling URL
-  // auto-detection prevents the client from racing the PKCE code exchange.
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+  },
 });
 
 const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
