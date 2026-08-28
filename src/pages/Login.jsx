@@ -4,9 +4,11 @@ import { xedruo } from "@/api/xedruoClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { LogIn, Mail, Lock, Loader2, KeyRound } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import { toast } from "@/components/ui/use-toast";
 
 const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
 const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
@@ -17,6 +19,8 @@ export default function Login() {
   const destination = company ? `/company/${encodeURIComponent(company)}/dashboard` : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [mode, setMode] = useState("password");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +28,27 @@ export default function Login() {
     e.preventDefault(); setError(""); setLoading(true);
     try { await xedruo.auth.loginViaEmailPassword(email, password); window.location.href = destination; }
     catch (err) { setError(err.message || "Invalid email or password"); }
+    finally { setLoading(false); }
+  };
+
+  const sendOtp = async () => {
+    if (!email.trim()) { setError("Enter your email address first"); return; }
+    setError(""); setLoading(true);
+    try {
+      await xedruo.auth.sendLoginOtp(email.trim());
+      setMode("otp");
+      toast({ title: "Verification code sent", description: `Check ${email.trim()} for your Xedruo code.` });
+    } catch (err) { setError(err.message || "Could not send verification code"); }
+    finally { setLoading(false); }
+  };
+
+  const verifyOtp = async () => {
+    if (otpCode.length !== 6) { setError("Enter the 6-digit verification code"); return; }
+    setError(""); setLoading(true);
+    try {
+      await xedruo.auth.verifyLoginOtp(email.trim(), otpCode);
+      window.location.href = destination;
+    } catch (err) { setError(err.message || "Invalid or expired verification code"); }
     finally { setLoading(false); }
   };
 
@@ -43,6 +68,21 @@ export default function Login() {
     }
   };
 
+  if (mode === "otp") return (
+    <AuthLayout icon={KeyRound} title="Verify your email" subtitle={`We sent a 6-digit code to ${email}`} footer={<button onClick={() => { setMode("password"); setOtpCode(""); setError(""); }} className="text-primary font-medium hover:underline">Use another sign-in method</button>}>
+      {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
+      <div className="flex justify-center mb-6">
+        <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus autoComplete="one-time-code">
+          <InputOTPGroup>{[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup>
+        </InputOTP>
+      </div>
+      <Button className="w-full h-12 font-medium" onClick={verifyOtp} disabled={loading || otpCode.length !== 6}>
+        {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : "Verify & continue"}
+      </Button>
+      <button onClick={sendOtp} disabled={loading} className="w-full mt-4 text-sm text-primary font-medium hover:underline">Resend code</button>
+    </AuthLayout>
+  );
+
   return (
     <AuthLayout icon={LogIn} title="Welcome back" subtitle={company ? `Log in to ${company}` : "Log in to your account"} footer={<>
       Don't have an account? <Link to={`/register${company ? `?company=${encodeURIComponent(company)}` : ""}`} className="text-primary font-medium hover:underline">Create one</Link>
@@ -54,9 +94,10 @@ export default function Login() {
       {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" /><Input id="email" type="email" autoComplete="email" autoFocus placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12" required /></div></div>
-        <div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="password">Password</Label><Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link></div><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" /><Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required /></div></div>
+        {mode === "password" && <div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="password">Password</Label><Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link></div><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" /><Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required /></div></div>}
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Logging in...</> : "Log in"}</Button>
       </form>
+      <button onClick={sendOtp} disabled={loading || !email.trim()} className="w-full mt-4 text-sm font-medium text-primary hover:underline disabled:opacity-50">Sign in with email code instead</button>
     </AuthLayout>
   );
 }
