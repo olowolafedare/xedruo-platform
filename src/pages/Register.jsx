@@ -1,44 +1,34 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { xedruo } from "@/api/xedruoClient";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, Phone } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import AuthLayout from "@/components/AuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
-import { toast } from "@/components/ui/use-toast";
-import { ensureXedruoId, saveCustomerContact } from "@/lib/xedruoIdentity";
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { UserPlus, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthLayout from '@/components/AuthLayout';
+import GoogleIcon from '@/components/GoogleIcon';
+import { xedruo } from '@/api/xedruoClient';
 
-const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
-const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
-const countries = [["NG", "Nigeria (+234)"], ["GH", "Ghana (+233)"], ["KE", "Kenya (+254)"], ["ZA", "South Africa (+27)"], ["US", "United States (+1)"], ["GB", "United Kingdom (+44)"], ["CA", "Canada (+1)"], ["AE", "UAE (+971)"]];
+const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
+const isLocalHost = ['localhost','127.0.0.1','0.0.0.0'].includes(window.location.hostname);
+const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 
 export default function Register() {
-  const location = useLocation();
-  const company = new URLSearchParams(location.search).get("company");
-  const destination = company ? `/company/${encodeURIComponent(company)}` : "/welcome";
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState("");
-  const [country, setCountry] = useState("NG"); const [phone, setPhone] = useState(""); const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); const [showOtp, setShowOtp] = useState(false); const [otpCode, setOtpCode] = useState("");
-  const validateContact = () => { if (!country || !phone.trim()) { setError("Country and phone number are required"); return false; } return true; };
-  const handleSubmit = async (e) => { e.preventDefault(); setError(""); if (!validateContact()) return; if (password !== confirmPassword) { setError("Passwords do not match"); return; } setLoading(true); try { await xedruo.auth.register({ email, password }); setShowOtp(true); } catch (err) { setError(err.message || "Registration failed"); } finally { setLoading(false); } };
-  const handleVerify = async () => { setError(""); setLoading(true); try { const result = await xedruo.auth.verifyOtp({ email, otpCode }); if (result?.access_token) xedruo.auth.setToken(result.access_token); await ensureXedruoId(); await saveCustomerContact({ countryCode: country, phoneE164: phone.trim() }); window.location.href = destination; } catch (err) { setError(err.message || "Invalid verification code"); } finally { setLoading(false); } };
-  const handleResend = async () => { setError(""); try { await xedruo.auth.resendOtp(email); toast({ title: "Code sent", description: "Check your email for the new code." }); } catch (err) { setError(err.message || "Failed to resend code"); } };
-  const handleGoogle = async () => {
-    setError(""); if (!validateContact()) return;
-    localStorage.setItem("xedruo_pending_contact", JSON.stringify({ countryCode: country, phoneE164: phone.trim() }));
-    try {
-      if (isLocalHost) { const target = new URL("/register", PRODUCTION_ORIGIN); if (company) target.searchParams.set("company", company); window.location.replace(target.toString()); return; }
-      await xedruo.auth.loginWithProvider("google", destination);
-    } catch (err) { setError(err.message || "Google sign-up failed"); setLoading(false); }
-  };
-  if (showOtp) return <AuthLayout icon={Mail} title="Verify your email" subtitle={`We sent a code to ${email}`}><div className="flex justify-center mb-6"><InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus autoComplete="one-time-code"><InputOTPGroup><InputOTPSlot index={0}/><InputOTPSlot index={1}/><InputOTPSlot index={2}/><InputOTPSlot index={3}/><InputOTPSlot index={4}/><InputOTPSlot index={5}/></InputOTPGroup></InputOTP></div>{error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<Button className="w-full h-12 font-medium" onClick={handleVerify} disabled={loading || otpCode.length < 6}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Verifying...</> : "Verify"}</Button><p className="text-center text-sm text-muted-foreground mt-4">Didn't receive the code? <button onClick={handleResend} className="text-primary font-medium hover:underline">Resend</button></p></AuthLayout>;
-  return <AuthLayout icon={UserPlus} title="Create your account" subtitle={company ? `Create your ${company} account` : "Sign up to get started"} footer={<>Already have an account? <Link to={`/login${company ? `?company=${encodeURIComponent(company)}` : ""}`} className="text-primary font-medium hover:underline">Log in</Link></>}>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5"><div className="space-y-2"><Label htmlFor="country">Country</Label><select id="country" value={country} onChange={e=>setCountry(e.target.value)} className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></div><div className="space-y-2"><Label htmlFor="phone">Phone number</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="phone" type="tel" autoComplete="tel" placeholder="+2348012345678" value={phone} onChange={e=>setPhone(e.target.value)} className="pl-10 h-12" required/></div></div></div>
-    <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2"/>Continue with Google</Button>
-    <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"/></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or email & password</span></div></div>{error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <form onSubmit={handleSubmit} className="space-y-4"><div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} className="pl-10 h-12" required/></div></div><div className="space-y-2"><Label htmlFor="password">Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="password" type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} className="pl-10 h-12" required/></div></div><div className="space-y-2"><Label htmlFor="confirm">Confirm Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} className="pl-10 h-12" required/></div></div><Button type="submit" className="w-full h-12 font-medium" disabled={loading}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Creating account...</> : "Create account"}</Button></form>
+  const location = useLocation(); const navigate = useNavigate();
+  const company = new URLSearchParams(location.search).get('company');
+  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState('');
+  const [showPassword,setShowPassword]=useState(false); const [showConfirm,setShowConfirm]=useState(false); const [error,setError]=useState(''); const [loading,setLoading]=useState(false);
+  const destination = company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
+  const submit = async (e) => { e.preventDefault(); setError(''); if(password!==confirm){setError('Passwords do not match');return;} setLoading(true); try { const result=await xedruo.auth.register({email:email.trim(),password}); if(result?.session) navigate('/onboarding',{replace:true}); else navigate('/login',{replace:true}); } catch(err){setError(err.message||'Registration failed');} finally{setLoading(false);} };
+  const google = async () => { setError(''); setLoading(true); localStorage.setItem(AUTH_RETURN_KEY,destination); try { if(isLocalHost){const target=new URL('/register',PRODUCTION_ORIGIN);if(company)target.searchParams.set('company',company);window.location.replace(target.toString());return;} await xedruo.auth.loginWithProvider('google'); } catch(err){setError(err.message||'Google sign-up failed');setLoading(false);} };
+  return <AuthLayout icon={UserPlus} title="Create your Xedruo account" subtitle="Start with Google or email. After registration, we'll ask for your country and phone verification." footer={<>Already have an account? <Link to={`/login${company?`?company=${encodeURIComponent(company)}`:''}`} className="text-primary font-medium hover:underline">Log in</Link></>}>
+    <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={google} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2"/>Continue with Google</Button>
+    <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"/></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or email & password</span></div></div>
+    {error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
+    <form onSubmit={submit} className="space-y-4">
+      <div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} className="pl-10 h-12" required/></div></div>
+      <div className="space-y-2"><Label htmlFor="password">Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="password" type={showPassword?'text':'password'} autoComplete="new-password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} className="pl-10 pr-10 h-12" required/><button type="button" aria-label="Show password" onClick={()=>setShowPassword(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPassword?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}</button></div></div>
+      <div className="space-y-2"><Label htmlFor="confirm">Confirm Password</Label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input id="confirm" type={showConfirm?'text':'password'} autoComplete="new-password" placeholder="••••••••" value={confirm} onChange={e=>setConfirm(e.target.value)} className="pl-10 pr-10 h-12" required/><button type="button" aria-label="Show confirmation password" onClick={()=>setShowConfirm(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showConfirm?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}</button></div></div>
+      <Button type="submit" className="w-full h-12" disabled={loading}>{loading?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Creating account...</>:'Create account'}</Button>
+    </form>
   </AuthLayout>;
 }
