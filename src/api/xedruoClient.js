@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 // Standalone Xedruo backend. Base44 is no longer used for authentication,
 // database, storage, or application runtime services.
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOndi5nG0v0f';
+// Support both the current publishable-key name and the legacy anon-key name.
+// The publishable key below is safe for browser use and is only a fallback so
+// production does not fail when Vercel environment variables are missing.
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SBS-hnI6lAOdi5UnrLu2HA_GlvG0_av';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
