@@ -4,6 +4,7 @@ import { supabase } from "@/api/xedruoClient";
 import { ensureXedruoId, saveCustomerContact } from "@/lib/xedruoIdentity";
 
 const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
+const AUTH_RETURN_KEY = "xedruo_oauth_return_to";
 
 function safeDestination(value) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
@@ -15,50 +16,15 @@ async function completeOAuthSession() {
   const code = url.searchParams.get("code");
   const oauthError = url.searchParams.get("error_description") || url.searchParams.get("error");
   if (oauthError) throw new Error(decodeURIComponent(oauthError.replace(/\+/g, " ")));
+  if (!code) throw new Error("Google did not return an authorization code.");
 
-  let resolveAuth;
-  let rejectAuth;
-  const sessionPromise = new Promise((resolve, reject) => {
-    resolveAuth = resolve;
-    rejectAuth = reject;
-  });
-  let settled = false;
-  const timeout = window.setTimeout(() => {
-    if (!settled) {
-      settled = true;
-      rejectAuth(new Error("Google sign-in completed without an active session."));
-    }
-  }, 10000);
-
-  const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-    if (session?.user && !settled) {
-      settled = true;
-      window.clearTimeout(timeout);
-      resolveAuth(session);
-    }
-  });
-
-  try {
-    // PKCE callbacks return ?code=. Explicitly exchange it before relying on
-    // getSession(), which fixes the race shown on the production callback.
-    if (code) {
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error && data?.session?.user) return data.session;
-      // If Supabase already consumed the code during client initialization,
-      // continue to getSession() instead of treating that as a failed login.
-    }
-
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    if (data?.session?.user) return data.session;
-
-    // Fallback for implicit/hash responses and delayed Supabase initialization.
-    if (window.location.hash.includes("access_token=")) return await sessionPromise;
-    return await sessionPromise;
-  } finally {
-    window.clearTimeout(timeout);
-    authListener?.subscription?.unsubscribe?.();
-  }
+  // PKCE is intentionally exchanged exactly once, on the same browser origin
+  // that started the flow. The client has detectSessionInUrl disabled so this
+  // callback remains the single owner of the code exchange.
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) throw error;
+  if (!data?.session?.user) throw new Error("Google sign-in completed without an active session.");
+  return data.session;
 }
 
 export default function AuthCallback() {
@@ -68,17 +34,19 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let active = true;
-    const destination = safeDestination(searchParams.get("redirect"));
 
     if (["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname)) {
       const target = new URL("/auth/callback", PRODUCTION_ORIGIN);
-      target.searchParams.set("redirect", destination);
       target.hash = window.location.hash;
       window.location.replace(target.toString());
       return () => { active = false; };
     }
 
     const finish = async () => {
+      const destination = safeDestination(
+        searchParams.get("redirect") || localStorage.getItem(AUTH_RETURN_KEY)
+      );
+
       try {
         const session = await completeOAuthSession();
         if (!session?.user) throw new Error("Google sign-in completed without an active session.");
@@ -94,6 +62,9 @@ export default function AuthCallback() {
         } else {
           await ensureXedruoId();
         }
+
+        localStorage.removeItem(AUTH_RETURN_KEY);
+        localStorage.removeItem("xedruo_oauth_company");
 
         if (active) navigate(destination, { replace: true });
       } catch (err) {
