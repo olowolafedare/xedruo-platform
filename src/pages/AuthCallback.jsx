@@ -11,52 +11,54 @@ function safeDestination(value) {
 }
 
 async function completeOAuthSession() {
-  // Supabase OAuth uses PKCE in the browser. The callback must explicitly
-  // exchange the returned ?code= for a session before calling getSession().
-  // Waiting for getSession() first creates a race where Google has completed
-  // successfully but the app still sees no active session.
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
   const oauthError = url.searchParams.get("error_description") || url.searchParams.get("error");
-
   if (oauthError) throw new Error(decodeURIComponent(oauthError.replace(/\+/g, " ")));
 
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  let resolveAuth;
+  let rejectAuth;
+  const sessionPromise = new Promise((resolve, reject) => {
+    resolveAuth = resolve;
+    rejectAuth = reject;
+  });
+  let settled = false;
+  const timeout = window.setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      rejectAuth(new Error("Google sign-in completed without an active session."));
+    }
+  }, 10000);
+
+  const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user && !settled) {
+      settled = true;
+      window.clearTimeout(timeout);
+      resolveAuth(session);
+    }
+  });
+
+  try {
+    // PKCE callbacks return ?code=. Explicitly exchange it before relying on
+    // getSession(), which fixes the race shown on the production callback.
+    if (code) {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error && data?.session?.user) return data.session;
+      // If Supabase already consumed the code during client initialization,
+      // continue to getSession() instead of treating that as a failed login.
+    }
+
+    const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     if (data?.session?.user) return data.session;
+
+    // Fallback for implicit/hash responses and delayed Supabase initialization.
+    if (window.location.hash.includes("access_token=")) return await sessionPromise;
+    return await sessionPromise;
+  } finally {
+    window.clearTimeout(timeout);
+    authListener?.subscription?.unsubscribe?.();
   }
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (data?.session?.user) return data.session;
-
-  // Handle providers/configurations that return tokens in the URL hash.
-  // detectSessionInUrl normally processes this, but a short event-based wait
-  // makes the callback resilient to initialization timing differences.
-  const hash = window.location.hash;
-  if (hash.includes("access_token=")) {
-    const result = await new Promise((resolve, reject) => {
-      let settled = false;
-      const timeout = window.setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          reject(new Error("Google sign-in completed without an active session."));
-        }
-      }, 10000);
-      const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-        if (session?.user && !settled) {
-          settled = true;
-          window.clearTimeout(timeout);
-          listener.subscription?.unsubscribe?.();
-          resolve(session);
-        }
-      });
-    });
-    if (result?.user) return result;
-  }
-
-  throw new Error("Google sign-in completed without an active session.");
 }
 
 export default function AuthCallback() {
@@ -66,7 +68,6 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let active = true;
-    let subscription;
     const destination = safeDestination(searchParams.get("redirect"));
 
     if (["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname)) {
@@ -101,10 +102,7 @@ export default function AuthCallback() {
     };
 
     finish();
-    return () => {
-      active = false;
-      subscription?.unsubscribe?.();
-    };
+    return () => { active = false; };
   }, [navigate, searchParams]);
 
   if (error) {
