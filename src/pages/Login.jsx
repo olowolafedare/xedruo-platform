@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 
 const PRODUCTION_ORIGIN = "https://xedruo-platform.vercel.app";
 const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+const AUTH_RETURN_KEY = "xedruo_oauth_return_to";
 
 export default function Login() {
   const location = useLocation();
@@ -55,14 +56,23 @@ export default function Login() {
   const handleGoogle = async () => {
     setError(""); setLoading(true);
     try {
+      // Keep the post-auth destination in browser storage instead of adding
+      // query parameters to redirectTo. This makes the Supabase redirect URL
+      // exact and prevents OAuth authorization from being rejected before
+      // the browser ever reaches Google.
+      localStorage.setItem(AUTH_RETURN_KEY, destination);
+      if (company) localStorage.setItem("xedruo_oauth_company", company);
+
       if (isLocalHost) {
         const target = new URL("/login", PRODUCTION_ORIGIN);
         if (company) target.searchParams.set("company", company);
         window.location.replace(target.toString());
         return;
       }
-      await xedruo.auth.loginWithProvider("google", destination);
+      await xedruo.auth.loginWithProvider("google");
     } catch (err) {
+      localStorage.removeItem(AUTH_RETURN_KEY);
+      localStorage.removeItem("xedruo_oauth_company");
       setError(err.message || "Google sign-in failed");
       setLoading(false);
     }
