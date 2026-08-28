@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import AuthLayout from '@/components/AuthLayout';
 import { supabase, xedruo } from '@/api/xedruoClient';
+import { useAuth } from '@/lib/AuthContext';
 import { ensureXedruoId, markPhoneVerified } from '@/lib/xedruoIdentity';
 import { COUNTRIES } from '@/data/countries';
 
@@ -14,6 +15,7 @@ const normalizePhone = (value) => value.trim().replace(/[()\s-]/g, '');
 
 export default function IdentityOnboarding() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [country, setCountry] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,8 +29,8 @@ export default function IdentityOnboarding() {
   useEffect(() => {
     (async () => {
       try {
-        const me = await xedruo.auth.me();
-        const { data, error: readError } = await supabase.from('xedruo_customer_profiles').select('country_code,country_name,phone_e164,phone_verified,kyc_status,kyc_level').eq('user_id', me.id).maybeSingle();
+        if (!user?.id) throw new Error('Your login session is not ready. Please sign in again.');
+        const { data, error: readError } = await supabase.from('xedruo_customer_profiles').select('country_code,country_name,phone_e164,phone_verified').eq('user_id', user.id).maybeSingle();
         if (readError) throw readError;
         if (data?.country_code) setCountry(data.country_code);
         if (data?.phone_e164) setPhone(data.phone_e164);
@@ -37,10 +39,10 @@ export default function IdentityOnboarding() {
           setIdentity(current);
           setStep('complete');
         }
-      } catch (err) { setError(err.message || 'Could not load onboarding'); }
+      } catch (err) { setError(err.message || 'Could not load onboarding.'); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [user?.id]);
 
   const filteredCountries = useMemo(() => {
     const q = countrySearch.trim().toLowerCase();
@@ -54,9 +56,11 @@ export default function IdentityOnboarding() {
     if (!country) return setError('Select your country');
     const value = normalizePhone(phone);
     if (!/^\+[1-9]\d{7,14}$/.test(value)) return setError('Enter your phone number in international format, e.g. +2348012345678');
+    if (!user?.id) return setError('Your login session is not ready. Please sign in again.');
     setSending(true);
     try {
-      await supabase.from('xedruo_customer_profiles').upsert({ user_id: (await xedruo.auth.me()).id, country_code: country, country_name: selected?.name || null, phone_e164: value, phone_verified: false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      const { error: upsertError } = await supabase.from('xedruo_customer_profiles').upsert({ user_id: user.id, country_code: country, country_name: selected?.name || null, phone_e164: value, phone_verified: false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      if (upsertError) throw upsertError;
       await xedruo.auth.sendPhoneOtp(value);
       setPhone(value); setStep('otp');
     } catch (err) { setError(err.message || 'Could not send phone verification code.'); }
@@ -76,7 +80,7 @@ export default function IdentityOnboarding() {
     finally { setSending(false); }
   };
 
-  if (loading) return <div className="fixed inset-0 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
   if (step === 'complete' && identity) return <AuthLayout icon={ShieldCheck} title="Your Xedruo account is ready" subtitle="Your temporary identity is active for 30 days while you complete verification.">
     <div className="rounded-2xl border bg-muted/30 p-5 space-y-4">
@@ -98,7 +102,7 @@ export default function IdentityOnboarding() {
     {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
     <div className="space-y-4">
       <div className="space-y-2"><Label>Country</Label><Input placeholder="Search country..." value={countrySearch} onChange={e => setCountrySearch(e.target.value)} />
-        <select className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e => setCountry(e.target.value)} size={Math.min(7, Math.max(3, filteredCountries.length))}>
+        <select aria-label="Select country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e => setCountry(e.target.value)} size={Math.min(7, Math.max(3, filteredCountries.length))}>
           <option value="">Select country</option>{filteredCountries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}
         </select>
       </div>
