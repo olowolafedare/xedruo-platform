@@ -32,10 +32,7 @@ const auth = {
     return data;
   },
   async sendLoginOtp(email) {
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
+    const { data, error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
     if (error) throw Object.assign(new Error(error.message), { status: error.status || 400, data: error });
     return data;
   },
@@ -79,8 +76,8 @@ const auth = {
 };
 
 const entity = (name) => ({
-  async list(sort = '-created_date', limit = 50) { let query = supabase.from('xedruo_records').select('*').eq('entity', name).eq('owner_id', (await supabase.auth.getUser()).data.user?.id); query = query.order('created_at', { ascending: !sort?.startsWith('-') }).limit(limit); const { data, error } = await query; if (error) throw error; return (data || []).map(normalize); },
-  async filter(filters = {}, sort = '-created_date', limit = 50) { let query = supabase.from('xedruo_records').select('*').eq('entity', name).eq('owner_id', (await supabase.auth.getUser()).data.user?.id); for (const [key, value] of Object.entries(filters)) query = query.eq(`data->>${key}`, String(value)); query = query.order('created_at', { ascending: !sort?.startsWith('-') }).limit(limit); const { data, error } = await query; if (error) throw error; return (data || []).map(normalize); },
+  async list(sort = '-created_date', limit = 50) { let query = supabase.from('xedruo_records').select('*').eq('entity', name); query = query.order('created_at', { ascending: !sort?.startsWith('-') }).limit(limit); const { data, error } = await query; if (error) throw error; return (data || []).map(normalize); },
+  async filter(filters = {}, sort = '-created_date', limit = 50) { let query = supabase.from('xedruo_records').select('*').eq('entity', name); for (const [key, value] of Object.entries(filters)) query = query.eq(`data->>${key}`, String(value)); query = query.order('created_at', { ascending: !sort?.startsWith('-') }).limit(limit); const { data, error } = await query; if (error) throw error; return (data || []).map(normalize); },
   async get(id) { const { data, error } = await supabase.from('xedruo_records').select('*').eq('entity', name).eq('id', id).maybeSingle(); if (error) throw error; if (!data) throw new Error('Record not found'); return normalize(data); },
   async create(payload) { const { data: userData } = await supabase.auth.getUser(); const { data, error } = await supabase.from('xedruo_records').insert({ entity: name, owner_id: userData?.user?.id || null, data: payload }).select().single(); if (error) throw error; return normalize(data); },
   async update(id, patch) { const current = await this.get(id); const next = { ...current }; delete next.id; delete next.created_date; delete next.updated_date; const { data, error } = await supabase.from('xedruo_records').update({ data: { ...next, ...patch }, updated_at: new Date().toISOString() }).eq('entity', name).eq('id', id).select().single(); if (error) throw error; return normalize(data); },
