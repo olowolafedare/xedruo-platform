@@ -10,6 +10,55 @@ function safeDestination(value) {
   return value;
 }
 
+async function completeOAuthSession() {
+  // Supabase OAuth uses PKCE in the browser. The callback must explicitly
+  // exchange the returned ?code= for a session before calling getSession().
+  // Waiting for getSession() first creates a race where Google has completed
+  // successfully but the app still sees no active session.
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  const oauthError = url.searchParams.get("error_description") || url.searchParams.get("error");
+
+  if (oauthError) throw new Error(decodeURIComponent(oauthError.replace(/\+/g, " ")));
+
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    if (data?.session?.user) return data.session;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data?.session?.user) return data.session;
+
+  // Handle providers/configurations that return tokens in the URL hash.
+  // detectSessionInUrl normally processes this, but a short event-based wait
+  // makes the callback resilient to initialization timing differences.
+  const hash = window.location.hash;
+  if (hash.includes("access_token=")) {
+    const result = await new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = window.setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("Google sign-in completed without an active session."));
+        }
+      }, 10000);
+      const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user && !settled) {
+          settled = true;
+          window.clearTimeout(timeout);
+          listener.subscription?.unsubscribe?.();
+          resolve(session);
+        }
+      });
+    });
+    if (result?.user) return result;
+  }
+
+  throw new Error("Google sign-in completed without an active session.");
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,43 +79,22 @@ export default function AuthCallback() {
 
     const finish = async () => {
       try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+        const session = await completeOAuthSession();
+        if (!session?.user) throw new Error("Google sign-in completed without an active session.");
 
-        if (data?.session?.user) {
-          const pending = localStorage.getItem("xedruo_pending_contact");
-          if (pending) {
-            try {
-              const contact = JSON.parse(pending);
-              await saveCustomerContact(contact);
-            } finally {
-              localStorage.removeItem("xedruo_pending_contact");
-            }
-          } else {
-            await ensureXedruoId();
+        const pending = localStorage.getItem("xedruo_pending_contact");
+        if (pending) {
+          try {
+            const contact = JSON.parse(pending);
+            await saveCustomerContact(contact);
+          } finally {
+            localStorage.removeItem("xedruo_pending_contact");
           }
-          if (active) navigate(destination, { replace: true });
-          return;
+        } else {
+          await ensureXedruoId();
         }
 
-        const result = await new Promise((resolve, reject) => {
-          let settled = false;
-          const timeout = window.setTimeout(() => {
-            if (!settled) {
-              settled = true;
-              reject(new Error("Google sign-in completed without an active session."));
-            }
-          }, 10000);
-          subscription = supabase.auth.onAuthStateChange((event, session) => {
-            if (session?.user && !settled) {
-              settled = true;
-              window.clearTimeout(timeout);
-              resolve(session);
-            }
-          }).data.subscription;
-        });
-
-        if (result?.user && active) navigate(destination, { replace: true });
+        if (active) navigate(destination, { replace: true });
       } catch (err) {
         if (active) setError(err?.message || "Google sign-in could not be completed.");
       }
