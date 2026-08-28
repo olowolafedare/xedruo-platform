@@ -5,7 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SBS-hnI6lAOndi5nG0v0f';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  // OAuth callback is handled explicitly by AuthCallback.jsx. Disabling URL
+  // auto-detection prevents the client from racing the PKCE code exchange.
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
 
 const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
@@ -55,8 +57,6 @@ const auth = {
   redirectToLogin() { window.location.href = '/login'; },
   async loginWithProvider(provider, redirect = '/dashboard') {
     const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
-    // OAuth must always return to the deployed Xedruo callback, even when
-    // the sign-in button was clicked from a local development build.
     const callbackUrl = new URL('/auth/callback', AUTH_PRODUCTION_ORIGIN);
     callbackUrl.searchParams.set('redirect', safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl.toString() } });
