@@ -8,9 +8,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // The /auth/callback page explicitly exchanges the PKCE code. Keeping
-    // automatic URL detection off prevents the client from consuming the code
-    // before the callback can exchange it and receive the session event.
     detectSessionInUrl: false,
     flowType: 'pkce',
   },
@@ -71,15 +68,16 @@ const auth = {
   },
   async logout() { await supabase.auth.signOut(); window.location.href = '/'; },
   redirectToLogin() { window.location.href = '/login'; },
-  async loginWithProvider(provider, redirect = '/dashboard') {
-    const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
-    // PKCE verifier is stored in browser storage, so the OAuth callback must
-    // stay on the same origin that initiated the flow. This is required when
-    // each Xedruo company has its own Vercel/custom domain.
-    const callbackUrl = new URL('/auth/callback', window.location.origin);
-    callbackUrl.searchParams.set('redirect', safeRedirect);
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl.toString() } });
+  async loginWithProvider(provider) {
+    // Keep redirectTo exact. The post-login company destination is stored
+    // locally by Login.jsx, avoiding redirect allow-list/query-string issues.
+    const callbackUrl = new URL('/auth/callback', window.location.origin).toString();
+    const { data, error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl } });
     if (error) throw new Error(error.message);
+    // Explicitly navigate to the provider URL. This removes ambiguity about
+    // whether the browser follows the URL returned by Supabase.
+    if (data?.url && window.location.href !== data.url) window.location.assign(data.url);
+    return data;
   },
   async refresh() { const { data, error } = await supabase.auth.refreshSession(); if (error) throw new Error(error.message); return data; },
 };
