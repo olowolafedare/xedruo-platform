@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { xedruo } from '@/api/xedruoClient';
+import { xedruo, supabase } from '@/api/xedruoClient';
 
 const AuthContext = createContext();
 
@@ -23,7 +23,23 @@ export const AuthProvider = ({ children }) => {
     } finally { setIsLoadingAuth(false); setAuthChecked(true); }
   }, []);
 
-  useEffect(() => { checkUserAuth(); }, [checkUserAuth]);
+  useEffect(() => {
+    checkUserAuth();
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        // The callback owns the PKCE exchange; this listener keeps the app's
+        // global auth context synchronized immediately after that exchange.
+        setUser(session.user);
+        setIsAuthenticated(true);
+        setAuthError(null);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      setAuthChecked(true);
+    });
+    return () => data?.subscription?.unsubscribe?.();
+  }, [checkUserAuth]);
 
   const logout = (shouldRedirect = true) => {
     setUser(null); setIsAuthenticated(false);
