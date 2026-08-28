@@ -8,7 +8,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    // The /auth/callback page explicitly exchanges the PKCE code. Keeping
+    // automatic URL detection off prevents the client from consuming the code
+    // before the callback can exchange it and receive the session event.
+    detectSessionInUrl: false,
     flowType: 'pkce',
   },
 });
@@ -70,7 +73,10 @@ const auth = {
   redirectToLogin() { window.location.href = '/login'; },
   async loginWithProvider(provider, redirect = '/dashboard') {
     const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
-    const callbackUrl = new URL('/auth/callback', AUTH_PRODUCTION_ORIGIN);
+    // PKCE verifier is stored in browser storage, so the OAuth callback must
+    // stay on the same origin that initiated the flow. This is required when
+    // each Xedruo company has its own Vercel/custom domain.
+    const callbackUrl = new URL('/auth/callback', window.location.origin);
     callbackUrl.searchParams.set('redirect', safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl.toString() } });
     if (error) throw new Error(error.message);
