@@ -3,9 +3,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcq
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SBS-hnI6lAOdi5UnrLu2HA_GlvG0_av';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce' } });
 const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
+const productionUrl = (path = '/') => new URL(path, AUTH_PRODUCTION_ORIGIN).toString();
 const getProfile = async (user) => { if (!user) return null; const { data } = await supabase.from('profiles').select('full_name,avatar_url,role').eq('id', user.id).maybeSingle(); return data || null; };
 const auth = {
-  async me() { const { data, error } = await supabase.auth.getUser(); if (error || !data?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profile = await getProfile(data.user); return { ...data.user, role: profile?.role || data.user.app_metadata?.role || 'user', name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email, avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || null }; },
+  async me() { const { data, error } = await supabase.auth.getUser(); if (error || !data?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profile = await getProfile(data.user); return { ...data.user, role: profile?.role || data.user.app_metadata?.role || 'user', name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email, full_name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || null, avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || null }; },
   async isAuthenticated() { try { await this.me(); return true; } catch { return false; } },
   async loginViaEmailPassword(email,password) { const {data,error}=await supabase.auth.signInWithPassword({email,password}); if(error) throw Object.assign(new Error(error.message),{status:error.status||401,data:error}); return data; },
   async sendLoginOtp(email) { const {data,error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true}}); if(error) throw Object.assign(new Error(error.message),{status:error.status||400,data:error}); return data; },
@@ -15,13 +16,13 @@ const auth = {
   async resendOtp(email) { const {data,error}=await supabase.auth.resend({type:'signup',email}); if(error) throw new Error(error.message); return data; },
   async sendPhoneOtp(phone) { const {data,error}=await supabase.auth.updateUser({phone}); if(error) throw Object.assign(new Error(error.message),{status:error.status||400,data:error}); return data; },
   async verifyPhoneOtp(phone,token) { const {data,error}=await supabase.auth.verifyOtp({phone,token,type:'phone_change'}); if(error) throw Object.assign(new Error(error.message),{status:error.status||400,data:error}); return data; },
-  async resetPasswordRequest(email) { const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:`${AUTH_PRODUCTION_ORIGIN}/reset-password`}); if(error) throw new Error(error.message); return true; },
+  async resetPasswordRequest(email) { const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:productionUrl('/reset-password')}); if(error) throw new Error(error.message); return true; },
   async resetPassword({newPassword}) { const {data,error}=await supabase.auth.updateUser({password:newPassword}); if(error) throw new Error(error.message); return data; },
   setToken() {},
   async updateMe(patch={}) { const {data:current}=await supabase.auth.getUser(); if(!current?.user) throw Object.assign(new Error('Not authenticated'),{status:401}); const {data,error}=await supabase.auth.updateUser({data:patch}); if(error) throw new Error(error.message); if(patch.role||patch.staff_role) await supabase.from('profiles').update({role:patch.role||patch.staff_role,updated_at:new Date().toISOString()}).eq('id',current.user.id); return data?.user; },
-  async logout() { await supabase.auth.signOut(); window.location.href='/'; },
-  redirectToLogin() { window.location.href='/login'; },
-  async loginWithProvider(provider) { const callbackUrl=new URL('/auth/callback',window.location.origin).toString(); const {data,error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:callbackUrl}}); if(error) throw new Error(error.message); if(data?.url&&window.location.href!==data.url) window.location.assign(data.url); return data; },
+  async logout() { await supabase.auth.signOut(); window.location.assign(productionUrl('/')); },
+  redirectToLogin() { window.location.assign(productionUrl('/login')); },
+  async loginWithProvider(provider) { const callbackUrl=productionUrl('/auth/callback'); const {data,error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:callbackUrl}}); if(error) throw new Error(error.message); if(data?.url&&window.location.href!==data.url) window.location.assign(data.url); return data; },
   async refresh() { const {data,error}=await supabase.auth.refreshSession(); if(error) throw new Error(error.message); return data; },
 };
 const entity=(name)=>({
