@@ -11,7 +11,9 @@ import { useAuth } from '@/lib/AuthContext';
 import { ensureXedruoId, markPhoneVerified } from '@/lib/xedruoIdentity';
 import { COUNTRIES } from '@/data/countries';
 
-const normalizePhone = (value) => value.trim().replace(/[()\s-]/g, '');
+const DIAL_CODES = { AF:'+93',AL:'+355',DZ:'+213',AD:'+376',AO:'+244',AG:'+1',AR:'+54',AM:'+374',AU:'+61',AT:'+43',AZ:'+994',BS:'+1',BH:'+973',BD:'+880',BB:'+1',BY:'+375',BE:'+32',BZ:'+501',BJ:'+229',BT:'+975',BO:'+591',BA:'+387',BW:'+267',BR:'+55',BN:'+673',BG:'+359',BF:'+226',BI:'+257',CV:'+238',KH:'+855',CM:'+237',CA:'+1',CF:'+236',TD:'+235',CL:'+56',CN:'+86',CO:'+57',KM:'+269',CG:'+242',CD:'+243',CR:'+506',CI:'+225',HR:'+385',CU:'+53',CY:'+357',CZ:'+420',DK:'+45',DJ:'+253',DM:'+1',DO:'+1',EC:'+593',EG:'+20',SV:'+503',GQ:'+240',ER:'+291',EE:'+372',SZ:'+268',ET:'+251',FJ:'+679',FI:'+358',FR:'+33',GA:'+241',GM:'+220',GE:'+995',DE:'+49',GH:'+233',GR:'+30',GD:'+1',GT:'+502',GN:'+224',GW:'+245',GY:'+592',HT:'+509',HN:'+504',HU:'+36',IS:'+354',IN:'+91',ID:'+62',IR:'+98',IQ:'+964',IE:'+353',IL:'+972',IT:'+39',JM:'+1',JP:'+81',JO:'+962',KZ:'+7',KE:'+254',KI:'+686',KP:'+850',KR:'+82',KW:'+965',KG:'+996',LA:'+856',LV:'+371',LB:'+961',LS:'+266',LR:'+231',LY:'+218',LI:'+423',LT:'+370',LU:'+352',MG:'+261',MW:'+265',MY:'+60',MV:'+960',ML:'+223',MT:'+356',MH:'+692',MR:'+222',MU:'+230',MX:'+52',FM:'+691',MD:'+373',MC:'+377',MN:'+976',ME:'+382',MA:'+212',MZ:'+258',MM:'+95',NA:'+264',NR:'+674',NP:'+977',NL:'+31',NZ:'+64',NI:'+505',NE:'+227',NG:'+234',MK:'+389',NO:'+47',OM:'+968',PK:'+92',PW:'+680',PS:'+970',PA:'+507',PG:'+675',PY:'+595',PE:'+51',PH:'+63',PL:'+48',PT:'+351',QA:'+974',RO:'+40',RU:'+7',RW:'+250',KN:'+1',LC:'+1',VC:'+1',WS:'+685',SM:'+378',ST:'+239',SA:'+966',SN:'+221',RS:'+381',SC:'+248',SL:'+232',SG:'+65',SK:'+421',SI:'+386',SB:'+677',SO:'+252',ZA:'+27',SS:'+211',ES:'+34',LK:'+94',SD:'+249',SR:'+597',SE:'+46',CH:'+41',SY:'+963',TJ:'+992',TZ:'+255',TH:'+66',TL:'+670',TG:'+228',TO:'+676',TT:'+1',TN:'+216',TR:'+90',TM:'+993',TV:'+688',UG:'+256',UA:'+380',AE:'+971',GB:'+44',US:'+1',UY:'+598',UZ:'+998',VU:'+678',VA:'+39',VE:'+58',VN:'+84',YE:'+967',ZM:'+260',ZW:'+263' };
+const normalizePhone = (value) => value.trim().replace(/[^0-9+]/g, '');
+const digitsOnly = (value) => value.replace(/\D/g, '');
 
 export default function IdentityOnboarding() {
   const navigate = useNavigate();
@@ -34,11 +36,7 @@ export default function IdentityOnboarding() {
         if (readError) throw readError;
         if (data?.country_code) setCountry(data.country_code);
         if (data?.phone_e164) setPhone(data.phone_e164);
-        if (data?.phone_verified) {
-          const current = await ensureXedruoId({ temporary: true });
-          setIdentity(current);
-          setStep('complete');
-        }
+        if (data?.phone_verified) { const current = await ensureXedruoId({ temporary: true }); setIdentity(current); setStep('complete'); }
       } catch (err) { setError(err.message || 'Could not load onboarding.'); }
       finally { setLoading(false); }
     })();
@@ -48,21 +46,33 @@ export default function IdentityOnboarding() {
     const q = countrySearch.trim().toLowerCase();
     return q ? COUNTRIES.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase() === q) : COUNTRIES;
   }, [countrySearch]);
-
   const selected = COUNTRIES.find(c => c.code === country);
+  const dialCode = DIAL_CODES[country] || '';
+
+  useEffect(() => {
+    if (!dialCode) return;
+    const current = normalizePhone(phone);
+    if (!current || current === '+') { setPhone(dialCode); return; }
+    if (current.startsWith('+')) {
+      const matched = Object.values(DIAL_CODES).find(code => current.startsWith(code));
+      if (!current.startsWith(dialCode)) setPhone(dialCode + (matched ? digitsOnly(current.slice(matched.length)) : digitsOnly(current)));
+    } else setPhone(dialCode + digitsOnly(current).replace(/^0/, ''));
+  }, [country]);
 
   const sendPhoneCode = async () => {
     setError('');
     if (!country) return setError('Select your country');
     const value = normalizePhone(phone);
-    if (!/^\+[1-9]\d{7,14}$/.test(value)) return setError('Enter your phone number in international format, e.g. +2348012345678');
+    const local = value.startsWith(dialCode) ? digitsOnly(value.slice(dialCode.length)) : digitsOnly(value).replace(/^0/, '');
+    const fullPhone = `${dialCode}${local}`;
+    if (!dialCode || local.length < 6 || local.length > 13) return setError(`Enter a valid phone number for ${selected?.name || 'your country'}.`);
     if (!user?.id) return setError('Your login session is not ready. Please sign in again.');
     setSending(true);
     try {
-      const { error: upsertError } = await supabase.from('xedruo_customer_profiles').upsert({ user_id: user.id, country_code: country, country_name: selected?.name || null, phone_e164: value, phone_verified: false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      const { error: upsertError } = await supabase.from('xedruo_customer_profiles').upsert({ user_id: user.id, country_code: country, country_name: selected?.name || null, phone_e164: fullPhone, phone_verified: false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
       if (upsertError) throw upsertError;
-      await xedruo.auth.sendPhoneOtp(value);
-      setPhone(value); setStep('otp');
+      await xedruo.auth.sendPhoneOtp(fullPhone);
+      setPhone(fullPhone); setStep('otp');
     } catch (err) { setError(err.message || 'Could not send phone verification code.'); }
     finally { setSending(false); }
   };
@@ -74,41 +84,14 @@ export default function IdentityOnboarding() {
     try {
       await xedruo.auth.verifyPhoneOtp(phone, otp);
       const result = await markPhoneVerified({ countryCode: country, countryName: selected?.name, phoneE164: phone });
-      setIdentity(result || await ensureXedruoId({ temporary: true }));
-      setStep('complete');
+      setIdentity(result || await ensureXedruoId({ temporary: true })); setStep('complete');
     } catch (err) { setError(err.message || 'Invalid or expired phone verification code.'); }
     finally { setSending(false); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  if (step === 'complete' && identity) return <AuthLayout icon={ShieldCheck} title="Your Xedruo account is ready" subtitle="Your temporary identity is active for 30 days while you complete verification."><div className="rounded-2xl border bg-muted/30 p-5 space-y-4"><div className="flex items-center gap-3"><CheckCircle2 className="w-6 h-6 text-primary" /><div><p className="font-semibold">Temporary Xedruo ID</p><p className="text-2xl font-bold tracking-widest">{identity.xedruo_id}</p></div></div><div className="flex items-center gap-2 text-sm"><Clock3 className="w-4 h-4" /> Valid for 30 days from issuance.</div><p className="text-sm text-muted-foreground">Complete the regional KYC requirements before the deadline to keep your account and convert this ID to permanent verified status.</p></div><Button className="w-full h-12 mt-5" onClick={() => navigate('/dashboard', { replace: true })}>Continue to Xedruo</Button></AuthLayout>;
+  if (step === 'otp') return <AuthLayout icon={Phone} title="Verify your phone" subtitle={`We sent a 6-digit code to ${phone}`}>{error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<div className="flex justify-center mb-6"><InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus><InputOTPGroup>{[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup></InputOTP></div><Button className="w-full h-12" onClick={verifyPhone} disabled={sending || otp.length !== 6}>{sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : 'Verify phone & get temporary ID'}</Button><button className="w-full mt-4 text-sm text-primary font-medium" onClick={() => setStep('contact')}>Change phone number</button></AuthLayout>;
 
-  if (step === 'complete' && identity) return <AuthLayout icon={ShieldCheck} title="Your Xedruo account is ready" subtitle="Your temporary identity is active for 30 days while you complete verification.">
-    <div className="rounded-2xl border bg-muted/30 p-5 space-y-4">
-      <div className="flex items-center gap-3"><CheckCircle2 className="w-6 h-6 text-primary" /><div><p className="font-semibold">Temporary Xedruo ID</p><p className="text-2xl font-bold tracking-widest">{identity.xedruo_id}</p></div></div>
-      <div className="flex items-center gap-2 text-sm"><Clock3 className="w-4 h-4" /> Valid for 30 days from issuance.</div>
-      <p className="text-sm text-muted-foreground">Complete the regional KYC requirements before the deadline to keep your account and convert this ID to permanent verified status.</p>
-    </div>
-    <Button className="w-full h-12 mt-5" onClick={() => navigate('/dashboard', { replace: true })}>Continue to Xedruo</Button>
-  </AuthLayout>;
-
-  if (step === 'otp') return <AuthLayout icon={Phone} title="Verify your phone" subtitle={`We sent a 6-digit code to ${phone}`}>
-    {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <div className="flex justify-center mb-6"><InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus><InputOTPGroup>{[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup></InputOTP></div>
-    <Button className="w-full h-12" onClick={verifyPhone} disabled={sending || otp.length !== 6}>{sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : 'Verify phone & get temporary ID'}</Button>
-    <button className="w-full mt-4 text-sm text-primary font-medium" onClick={() => setStep('contact')}>Change phone number</button>
-  </AuthLayout>;
-
-  return <AuthLayout icon={ShieldCheck} title="Complete your Xedruo account" subtitle="Choose your country and verify your phone. You will receive a temporary 30-day Xedruo ID; KYC is completed later based on your region.">
-    {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <div className="space-y-4">
-      <div className="space-y-2"><Label>Country</Label><Input placeholder="Search country..." value={countrySearch} onChange={e => setCountrySearch(e.target.value)} />
-        <select aria-label="Select country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e => setCountry(e.target.value)} size={Math.min(7, Math.max(3, filteredCountries.length))}>
-          <option value="">Select country</option>{filteredCountries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}
-        </select>
-      </div>
-      <div className="space-y-2"><Label htmlFor="onboarding-phone">Phone number</Label><Input id="onboarding-phone" type="tel" autoComplete="tel" placeholder="+2348012345678" value={phone} onChange={e => setPhone(e.target.value)} /></div>
-      <div className="rounded-lg border p-3 text-sm text-muted-foreground">🔐 Your country determines the KYC requirements shown later. We will not ask every region for the same documents.</div>
-      <Button className="w-full h-12" onClick={sendPhoneCode} disabled={sending}>{sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending code...</> : 'Send phone verification code'}</Button>
-    </div>
-  </AuthLayout>;
+  return <AuthLayout icon={ShieldCheck} title="Complete your Xedruo account" subtitle="Choose your country and verify your phone. You will receive a temporary 30-day Xedruo ID; KYC is completed later based on your region.">{error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<div className="space-y-4"><div className="space-y-2"><Label>Country</Label><Input placeholder="Search country..." value={countrySearch} onChange={e => setCountrySearch(e.target.value)} /><select aria-label="Select country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e => setCountry(e.target.value)}><option value="">Select country</option>{filteredCountries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></div>{dialCode && <div className="text-xs text-muted-foreground">Country calling code: <span className="font-semibold text-foreground">{dialCode}</span></div>}<div className="space-y-2"><Label htmlFor="onboarding-phone">Phone number</Label><div className="flex gap-2"><div className="w-24 shrink-0 flex items-center justify-center rounded-md border bg-muted/40 font-semibold text-sm">{dialCode || '+'}</div><Input id="onboarding-phone" type="tel" autoComplete="tel" placeholder={dialCode ? `${dialCode} 8012345678` : '+2348012345678'} value={phone.startsWith(dialCode) ? phone.slice(dialCode.length) : phone} onChange={e => setPhone(`${dialCode}${digitsOnly(e.target.value).replace(/^0/, '')}`)} /></div></div><div className="rounded-lg border p-3 text-sm text-muted-foreground">🔐 Your country determines the KYC requirements shown later. We will not ask every region for the same documents.</div><Button className="w-full h-12" onClick={sendPhoneCode} disabled={sending || !country || !dialCode}>{sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending code...</> : 'Send phone verification code'}</Button></div></AuthLayout>;
 }
