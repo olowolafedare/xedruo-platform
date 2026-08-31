@@ -1,6 +1,7 @@
 import { supabase } from '@/api/xedruoClient';
 
-export const XEDRUO_VAPID_PUBLIC_KEY = 'BJW6AAae8r-x6FXB0B_WPgRQPGCKvaTlLHku2GpOR7UXYxNi38z9wloCE9KGTDDPBl5rox1jXC8PVEMXvHm1Yiw';
+// Public VAPID key paired with the server-side key stored in Supabase.
+export const XEDRUO_VAPID_PUBLIC_KEY = 'BC03afYAQNb6TGHe45kdhum7MNLWx5zH3VDhYtFAqH11czYrDPvzkRAaqlTuvmFvtVQPVp9EAu6i2nm1UAOp_HQ';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
