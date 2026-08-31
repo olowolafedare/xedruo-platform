@@ -18,8 +18,19 @@ export async function registerXedruoPush() {
   const registration = await navigator.serviceWorker.register('/xedruo-sw.js', { scope: '/' });
   const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   if (permission !== 'granted') return { supported: true, status: permission };
+
+  // Rotate an older subscription if the VAPID key changed. This prevents a
+  // subscription created with the previous Xedruo key from silently failing.
   let subscription = await registration.pushManager.getSubscription();
-  if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(XEDRUO_VAPID_PUBLIC_KEY) });
+  if (subscription) {
+    try { await subscription.unsubscribe(); } catch { /* continue with a fresh subscription */ }
+    subscription = null;
+  }
+  subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(XEDRUO_VAPID_PUBLIC_KEY),
+  });
+
   const payload = subscription.toJSON();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) return { supported: true, status: 'no-session' };
