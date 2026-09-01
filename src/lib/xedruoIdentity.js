@@ -13,7 +13,7 @@ export async function ensureXedruoId({ temporary = true } = {}) {
   const me = await xedruo.auth.me();
   const { data: existing, error: readError } = await supabase.from('xedruo_identity').select('xedruo_id,status,expires_at,verified_at').eq('user_id', me.id).maybeSingle();
   if (readError) throw readError;
-  if (existing?.xedruo_id) return { ...existing, created: false };
+  if (existing?.xedruo_id) return { ...existing, xedruoId: existing.xedruo_id, created: false };
 
   const { data: profile, error: profileError } = await supabase.from('xedruo_customer_profiles').select('phone_verified,phone_e164,country_code,country_name,kyc_status,kyc_level').eq('user_id', me.id).maybeSingle();
   if (profileError) throw profileError;
@@ -26,7 +26,7 @@ export async function ensureXedruoId({ temporary = true } = {}) {
     const { data, error } = await supabase.from('xedruo_identity').insert({ user_id: me.id, xedruo_id: candidate, status, expires_at: expiresAt, verified_at: temporary ? null : new Date().toISOString() }).select('xedruo_id,status,expires_at,verified_at').single();
     if (!error && data?.xedruo_id) {
       await supabase.from('xedruo_customer_profiles').update({ xedruo_account_number: candidate, onboarding_started_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('user_id', me.id);
-      return { ...data, created: true };
+      return { ...data, xedruoId: data.xedruo_id, created: true };
     }
     if (error?.code !== '23505') throw error;
   }
