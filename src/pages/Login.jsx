@@ -16,10 +16,12 @@ const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 
 export default function Login() {
   const location = useLocation();
-  const company = new URLSearchParams(location.search).get('company');
+  const params = new URLSearchParams(location.search);
+  const company = params.get('company');
+  const initialPhone = params.get('phone') || '';
   const destination = company === 'pay-and-play' ? '/pay-and-play/app' : company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(initialPhone);
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [mode, setMode] = useState('password');
