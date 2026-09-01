@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SBS-hnI6lAOdi5UnrLu2HA_GlvG0_av';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce' } });
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' } });
 const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
 const productionUrl = (path = '/') => new URL(path, AUTH_PRODUCTION_ORIGIN).toString();
 const getProfile = async (user) => { if (!user) return null; const { data } = await supabase.from('profiles').select('full_name,avatar_url,role').eq('id', user.id).maybeSingle(); return data || null; };
