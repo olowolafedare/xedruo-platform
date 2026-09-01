@@ -17,7 +17,7 @@ const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 export default function Login() {
   const location = useLocation();
   const company = new URLSearchParams(location.search).get('company');
-  const destination = company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
+  const destination = company === 'pay-and-play' ? '/pay-and-play/app' : company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -44,8 +44,8 @@ export default function Login() {
 
   const sendPhoneOtp = async () => {
     setError(''); setLoading(true);
-    try { await xedruo.auth.sendPhoneLoginOtp(phone.trim()); setOtpTarget('phone'); setMode('otp'); toast({ title: 'SMS verification code sent', description: `Check ${phone.trim()} for your Xedruo code.` }); }
-    catch (err) { setError(err.message || 'Could not send SMS verification code'); }
+    try { await xedruo.auth.sendPhoneLoginOtp(phone.trim()); setOtpTarget('phone'); setMode('otp'); toast({ title: 'Phone verification code sent', description: `Check ${phone.trim()} for your Xedruo code.` }); }
+    catch (err) { setError(err.message || 'Could not send phone verification code'); }
     finally { setLoading(false); }
   };
 
@@ -82,7 +82,7 @@ export default function Login() {
   );
 
   return (
-    <AuthLayout icon={LogIn} title='Welcome back' subtitle={company ? `Log in to ${company}` : 'Log in to your account'} footer={<>
+    <AuthLayout icon={LogIn} title='Welcome back' subtitle={company === 'pay-and-play' ? 'Log in to Xedruo Pay & Play' : company ? `Log in to ${company}` : 'Log in to your account'} footer={<>
       Don't have an account? <Link to={`/register${company ? `?company=${encodeURIComponent(company)}` : ''}`} className='text-primary font-medium hover:underline'>Create one</Link>
     </>}>
       <Button variant='outline' className='w-full h-12 text-sm font-medium mb-6' onClick={handleGoogle} disabled={loading}><GoogleIcon className='w-5 h-5 mr-2' /> Continue with Google</Button>
@@ -96,7 +96,7 @@ export default function Login() {
       <div className='mt-5 pt-5 border-t border-border space-y-3'>
         <div className='text-sm font-medium'>Sign in with phone</div>
         <div className='relative'><Phone className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' aria-hidden='true' /><Input type='tel' inputMode='tel' autoComplete='tel' placeholder='+2348012345678' value={phone} onChange={e => setPhone(e.target.value)} className='pl-10 h-12' /></div>
-        <Button type='button' variant='outline' className='w-full h-12' onClick={sendPhoneOtp} disabled={loading || !phone.trim()}>{loading ? <><Loader2 className='w-4 h-4 mr-2 animate-spin' />Sending SMS...</> : 'Send SMS code'}</Button>
+        <Button type='button' variant='outline' className='w-full h-12' onClick={sendPhoneOtp} disabled={loading || !phone.trim()}>{loading ? <><Loader2 className='w-4 h-4 mr-2 animate-spin' />Sending...</> : 'Send phone code'}</Button>
       </div>
       <button onClick={sendOtp} disabled={loading || !email.trim()} className='w-full mt-4 text-sm font-medium text-primary hover:underline disabled:opacity-50'>Sign in with email code instead</button>
     </AuthLayout>
