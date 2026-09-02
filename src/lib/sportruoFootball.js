@@ -30,25 +30,24 @@ export async function getFootballData(resource, options = {}) {
     return data;
   };
 
-  // The dashboard needs both live states and upcoming fixtures. Requesting the
-  // provider separately by status avoids showing only SCHEDULED matches.
+  // Load the live feed separately from upcoming fixtures. football-data.org
+  // exposes LIVE as a filter that includes IN_PLAY and PAUSED matches.
+  // Keeping this to two requests avoids exhausting the free API rate limit.
   if (resource === 'matches' && options.status === 'SCHEDULED') {
-    const [live, inPlay, paused, scheduled] = await Promise.all([
+    const [live, scheduled] = await Promise.all([
       request({ ...options, competition: 'ALL', status: 'LIVE' }),
-      request({ ...options, competition: 'ALL', status: 'IN_PLAY' }),
-      request({ ...options, competition: 'ALL', status: 'PAUSED' }),
       request({ ...options, competition: 'ALL', status: 'SCHEDULED' }),
     ]);
 
     const byId = new Map();
-    for (const item of [...(live?.matches || []), ...(inPlay?.matches || []), ...(paused?.matches || []), ...(scheduled?.matches || [])]) {
+    for (const item of [...(live?.matches || []), ...(scheduled?.matches || [])]) {
       if (item?.id != null) byId.set(item.id, item);
     }
 
     return {
       ...(scheduled || {}),
       matches: Array.from(byId.values()).sort((a, b) => {
-        const liveRank = (status) => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(status) ? 0 : 1;
+        const liveRank = (status) => ['IN_PLAY', 'PAUSED'].includes(status) ? 0 : 1;
         return liveRank(a.status) - liveRank(b.status) || new Date(a.utcDate || 0) - new Date(b.utcDate || 0);
       }),
     };
