@@ -22,8 +22,8 @@ const auth = {
   async resetPassword({newPassword}) { const {data,error}=await supabase.auth.updateUser({password:newPassword}); if(error) throw new Error(error.message); return data; },
   setToken() {},
   async updateMe(patch={}) { const {data:current}=await supabase.auth.getUser(); if(!current?.user) throw Object.assign(new Error('Not authenticated'),{status:401}); const {data,error}=await supabase.auth.updateUser({data:patch}); if(error) throw new Error(error.message); if(patch.role||patch.staff_role) await supabase.from('profiles').update({role:patch.role||patch.staff_role,updated_at:new Date().toISOString()}).eq('id',current.user.id); return data?.user; },
-  async logout() { await supabase.auth.signOut(); window.location.assign(productionUrl('/')); },
-  redirectToLogin() { window.location.assign(productionUrl('/login')); },
+  async logout() { const returnTo=`${window.location.pathname}${window.location.search}${window.location.hash}`; if(returnTo.startsWith('/')&&returnTo!=='/login') localStorage.setItem('xedruo_logout_return_to',returnTo); await supabase.auth.signOut(); window.location.assign(productionUrl('/login')); },
+  redirectToLogin() { const returnTo=`${window.location.pathname}${window.location.search}${window.location.hash}`; const target=returnTo.startsWith('/')&&returnTo!=='/login'?`/login?returnTo=${encodeURIComponent(returnTo)}`:'/login'; window.location.assign(productionUrl(target)); },
   async loginWithProvider(provider) { const callbackUrl=productionUrl('/auth/callback'); const {data,error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:callbackUrl}}); if(error) throw new Error(error.message); if(data?.url&&window.location.href!==data.url) window.location.assign(data.url); return data; },
   async refresh() { const {data,error}=await supabase.auth.refreshSession(); if(error) throw new Error(error.message); return data; },
 };
