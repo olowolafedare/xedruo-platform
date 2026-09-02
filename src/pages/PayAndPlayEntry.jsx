@@ -1,9 +1,17 @@
-import React from 'react';
-import PayAndPlayPay from './PayAndPlayPay';
+import React,{useEffect,useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {useAuth} from '@/lib/AuthContext';
+import {supabase,xedruo} from '@/api/xedruoClient';
+import GoogleIcon from '@/components/GoogleIcon';
+import {Button} from '@/components/ui/button';
+import {Loader2,ShieldCheck,Phone} from 'lucide-react';
 
-// Pay & Play has exactly two end-user experiences.
-// The single entry URL opens the existing Xedruo PAY experience first.
-// PLAY remains the second experience at /pay-and-play/app.
 export default function PayAndPlayEntry(){
-  return <PayAndPlayPay />;
+ const {user,isAuthenticated,isLoadingAuth}=useAuth(); const navigate=useNavigate(); const [error,setError]=useState(''); const [checking,setChecking]=useState(true); const [phone,setPhone]=useState('');
+ useEffect(()=>{if(!isAuthenticated||!user){setChecking(false);return;} (async()=>{try{const {data,error:readError}=await supabase.from('xedruo_identity').select('xedruo_id').eq('user_id',user.id).maybeSingle();if(readError)throw readError;if(data?.xedruo_id){localStorage.setItem('xedruo_oauth_return_to','/pay-and-play/app');navigate('/pay-and-play/app',{replace:true});return;}localStorage.setItem('xedruo_pay_and_play_onboarding_return','/pay-and-play/app');navigate('/onboarding',{replace:true});}catch(e){setError(e.message||'Unable to check your Xedruo identity.');setChecking(false)}})()},[isAuthenticated,user,navigate]);
+ const continueGoogle=async()=>{setError('');setChecking(true);try{localStorage.setItem('xedruo_oauth_return_to','/pay-and-play');await xedruo.auth.loginWithProvider('google')}catch(e){setError(e.message||'Google sign-in failed');setChecking(false)}};
+ const continuePhone=()=>{localStorage.setItem('xedruo_pay_and_play_onboarding_return','/pay-and-play/app');navigate(`/login?company=pay-and-play&phone=${encodeURIComponent(phone.trim())}`)};
+ if(isLoadingAuth||checking)return <div className="min-h-screen grid place-items-center bg-slate-50"><Loader2 className="w-8 h-8 animate-spin"/></div>;
+ if(isAuthenticated)return <div className="min-h-screen grid place-items-center bg-slate-50 px-4"><div className="max-w-md w-full bg-white border rounded-3xl p-7 text-center"><ShieldCheck className="w-12 h-12 mx-auto text-emerald-600"/><h1 className="text-2xl font-bold mt-4">Complete your Xedruo setup</h1><p className="text-slate-500 mt-2">Your account is authenticated. Xedruo is taking you through the country and phone verification needed for your Xedruo ID.</p>{error&&<p className="mt-4 text-sm text-red-600">{error}</p>}<Button className="w-full mt-6" onClick={()=>navigate('/onboarding')}>Continue setup</Button></div></div>;
+ return <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-12"><div className="max-w-md mx-auto"><div className="text-center"><div className="mx-auto w-16 h-16 rounded-3xl bg-emerald-500 text-white grid place-items-center text-2xl font-bold shadow-lg">X</div><h1 className="text-3xl font-bold mt-5">Xedruo Pay & Play</h1><p className="text-slate-500 mt-2">Use your existing Xedruo identity or create one if you are new to Xedruo.</p></div>{error&&<div className="mt-6 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}<div className="mt-7 bg-white border rounded-3xl p-6 shadow-sm space-y-3"><Button onClick={continueGoogle} className="w-full h-12 text-sm font-semibold" disabled={checking}><GoogleIcon className="w-5 h-5 mr-2"/>Continue with Google</Button><div className="text-center text-xs text-slate-400">or</div><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/><input value={phone} onChange={e=>setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="+2348012345678" className="w-full h-12 rounded-xl border border-slate-200 pl-10 pr-3 outline-none focus:ring-2 focus:ring-emerald-500"/></div><Button onClick={continuePhone} variant="outline" className="w-full h-12" disabled={!phone.trim()||checking}>Continue with phone</Button><p className="text-xs text-center text-slate-500 pt-2">Both methods connect to the same Xedruo Identity. New users complete country and phone onboarding before receiving their Xedruo ID.</p></div><div className="mt-5 flex items-center justify-center gap-2 text-xs text-slate-500"><ShieldCheck className="w-4 h-4"/>One Xedruo ID across the ecosystem.</div></div></div>;
 }
