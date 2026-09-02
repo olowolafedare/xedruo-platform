@@ -13,13 +13,24 @@ import { toast } from '@/components/ui/use-toast';
 const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
 const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
+const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
+const SAFE_RETURN_PATHS = new Set(['/','/company/music-distribution','/music-distribution','/company/pay-and-play','/pay-and-play','/company/adom','/adom','/company/sportruo/dashboard','/company/hireuo','/hireuo','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
+
+const getSafeReturnPath = (value) => {
+  if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null;
+  const path = value.split('?')[0].split('#')[0];
+  if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|hireuo|healthruo|logistics|properties|spacetruo)(\/dashboard)?$/.test(path)) return value;
+  return null;
+};
 
 export default function Login() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const company = params.get('company');
+  const requestedReturnTo = getSafeReturnPath(params.get('returnTo'));
+  const savedReturnTo = getSafeReturnPath(localStorage.getItem(LOGOUT_RETURN_KEY));
   const initialPhone = params.get('phone') || '';
-  const destination = company === 'pay-and-play' ? '/pay-and-play/app' : company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
+  const destination = company === 'pay-and-play' ? '/pay-and-play/app' : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState(initialPhone);
   const [password, setPassword] = useState('');
@@ -31,7 +42,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
-    try { await xedruo.auth.loginViaEmailPassword(email, password); window.location.href = destination; }
+    try { await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid email or password'); }
     finally { setLoading(false); }
   };
@@ -47,7 +58,7 @@ export default function Login() {
   const sendPhoneOtp = async () => {
     setError(''); setLoading(true);
     try { await xedruo.auth.sendPhoneLoginOtp(phone.trim()); setOtpTarget('phone'); setMode('otp'); toast({ title: 'Phone verification code sent', description: `Check ${phone.trim()} for your Xedruo code.` }); }
-    catch (err) { setError(err.message || 'Could not send phone verification code'); }
+    catch (err) { setError(err.message || 'Could not send verification code'); }
     finally { setLoading(false); }
   };
 
@@ -57,7 +68,7 @@ export default function Login() {
     try {
       if (otpTarget === 'phone') await xedruo.auth.verifyPhoneLoginOtp(phone.trim(), otpCode);
       else await xedruo.auth.verifyLoginOtp(email.trim(), otpCode);
-      window.location.href = destination;
+      localStorage.removeItem(LOGOUT_RETURN_KEY); window.location.href = destination;
     } catch (err) { setError(err.message || 'Invalid or expired verification code'); }
     finally { setLoading(false); }
   };
@@ -67,7 +78,7 @@ export default function Login() {
     try {
       localStorage.setItem(AUTH_RETURN_KEY, destination);
       if (company) localStorage.setItem('xedruo_oauth_company', company);
-      if (isLocalHost) { const target = new URL('/login', PRODUCTION_ORIGIN); if (company) target.searchParams.set('company', company); window.location.replace(target.toString()); return; }
+      if (isLocalHost) { const target = new URL('/login', PRODUCTION_ORIGIN); if (company) target.searchParams.set('company', company); else target.searchParams.set('returnTo', destination); window.location.replace(target.toString()); return; }
       await xedruo.auth.loginWithProvider('google');
     } catch (err) {
       localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false);
