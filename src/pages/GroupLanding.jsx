@@ -26,7 +26,6 @@ export default function GroupLanding() {
             <div className="w-10 h-10 rounded-xl bg-cyan-400/10 border border-cyan-300/20 flex items-center justify-center"><Building2 className="w-5 h-5 text-cyan-300" /></div>
             <div><div className="font-bold tracking-tight">Xedruo</div><div className="text-[10px] tracking-[0.22em] text-slate-400 uppercase">Group Holdings</div></div>
           </Link>
-          <div><Link to="/register" className="rounded-xl bg-cyan-300 text-slate-950 px-4 py-2 text-sm font-semibold hover:bg-cyan-200">Get started</Link></div>
         </div>
       </header>
       <main>
