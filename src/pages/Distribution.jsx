@@ -77,7 +77,7 @@ const statusColor = {
 function DistributionContent() {
   const [releases, setReleases] = useState([]);
   const [subscribed, setSubscribed] = useState(false);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("plans");
   const [streamPeriod, setStreamPeriod] = useState("daily");
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -255,15 +255,12 @@ function DistributionContent() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          
           <TabsTrigger value="plans">Plans & Pricing</TabsTrigger>
           <TabsTrigger value="upload">Upload Music</TabsTrigger>
           <TabsTrigger value="catalog">My Releases</TabsTrigger>
           <TabsTrigger value="manage">Distribution</TabsTrigger>
         </TabsList>
-
-        {/* Artist Distribution Overview */}
-        <Overview />
 
         {/* Plans */}
         <TabsContent value="plans">
