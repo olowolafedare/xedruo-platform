@@ -77,7 +77,8 @@ const statusColor = {
 function DistributionContent() {
   const [releases, setReleases] = useState([]);
   const [subscribed, setSubscribed] = useState(false);
-  const initialTab = new URLSearchParams(window.location.search).get("tab");\n  const [tab, setTab] = useState(initialTab && ["plans","upload","catalog","manage"].includes(initialTab) ? initialTab : "catalog");
+  const initialTab = new URLSearchParams(window.location.search).get("tab");
+  const [tab, setTab] = useState(initialTab && ["plans","upload","catalog","manage"].includes(initialTab) ? initialTab : "catalog");
   const [streamPeriod, setStreamPeriod] = useState("daily");
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -136,7 +137,12 @@ function DistributionContent() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);\n\n  useEffect(() => {\n    const requested = new URLSearchParams(window.location.search).get("tab");\n    if (requested && ["plans","upload","catalog","manage"].includes(requested)) setTab(requested);\n  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested && ["plans","upload","catalog","manage"].includes(requested)) setTab(requested);
+  }, []);
 
   useEffect(() => {
     const unsub = xedruo.entities.Release.subscribe((event) => {
