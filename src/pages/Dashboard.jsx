@@ -29,7 +29,7 @@ export default function Dashboard() {
     const aTime = new Date(a.created_date || a.created_at || a.release_date || 0).getTime();
     const bTime = new Date(b.created_date || b.created_at || b.release_date || 0).getTime();
     return bTime - aTime;
-  })[0] || null;
+  }))[0] || null;
 
   const analytics = useMemo(() => {
     const source = latestRelease || {};
