@@ -28,4 +28,7 @@ export const musicEndpoints = {
   support: "/support",
   store: "/store",
   releases: "/releases",
+  preflightReport: "/preflight/report",
+  preflightRefresh: "/preflight/refresh",
+  preflightConfirmReview: "/preflight/confirm-review",
 };
