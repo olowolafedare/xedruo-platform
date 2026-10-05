@@ -77,7 +77,7 @@ const statusColor = {
 function DistributionContent() {
   const [releases, setReleases] = useState([]);
   const [subscribed, setSubscribed] = useState(false);
-  const [tab, setTab] = useState("overview");
+  const initialTab = new URLSearchParams(window.location.search).get("tab");\n  const [tab, setTab] = useState(initialTab && ["plans","upload","catalog","manage"].includes(initialTab) ? initialTab : "catalog");
   const [streamPeriod, setStreamPeriod] = useState("daily");
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -136,7 +136,7 @@ function DistributionContent() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load]);\n\n  useEffect(() => {\n    const requested = new URLSearchParams(window.location.search).get("tab");\n    if (requested && ["plans","upload","catalog","manage"].includes(requested)) setTab(requested);\n  }, []);
 
   useEffect(() => {
     const unsub = xedruo.entities.Release.subscribe((event) => {
@@ -168,57 +168,6 @@ function DistributionContent() {
       else { await navigator.clipboard.writeText(shareUrl); toast({ title: "Shareable link copied" }); }
     } catch (err) { if (err?.name !== "AbortError") toast({ title: "Unable to share release", variant: "destructive" }); }
   };
-
-  const getStreamCount = () => {
-    if (!latestRelease) return 0;
-    if (streamPeriod === "weekly") return Number(latestRelease.weekly_streams ?? latestRelease.streams_weekly ?? latestRelease.stream_count_weekly ?? 0);
-    return Number(latestRelease.daily_streams ?? latestRelease.streams_daily ?? latestRelease.stream_count_daily ?? 0);
-  };
-
-  const Overview = () => (
-    <TabsContent value="overview">
-      {loading ? <SkeletonList rows={2} /> : !latestRelease ? (
-        <div className="rounded-2xl border border-border bg-card p-10 text-center">
-          <p className="font-medium">No releases yet.</p>
-          <p className="text-sm text-muted-foreground mt-1">Your latest release details will appear here after you upload music.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between gap-4 flex-wrap">
-              <div><p className="text-xs uppercase tracking-widest text-muted-foreground">Latest Release</p><h2 className="text-xl font-bold mt-1">{latestRelease.title || "Untitled release"}</h2></div>
-              <Button variant="outline" size="sm" className="gap-2" onClick={shareRelease}><Share2 className="w-4 h-4" /> Share</Button>
-            </div>
-            <div className="p-5 sm:p-6 grid lg:grid-cols-[260px_1fr] gap-6">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border">
-                {latestRelease.artwork_url ? <img src={latestRelease.artwork_url} alt={latestRelease.title || "Release artwork"} className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-muted-foreground"><Globe className="w-10 h-10" /></div>}
-              </div>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 content-start">
-                <div><p className="text-xs text-muted-foreground">Title</p><p className="font-medium mt-1">{latestRelease.title || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Artist</p><p className="font-medium mt-1">{latestRelease.artist || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Featured Artist</p><p className="font-medium mt-1">{latestRelease.featured_artist || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Genre</p><p className="font-medium mt-1">{latestRelease.genre || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Language</p><p className="font-medium mt-1">{latestRelease.language || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Release Date</p><p className="font-medium mt-1">{latestRelease.release_date || "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Distribution Status</p><Badge className={(statusColor[latestRelease.status] || "") + " border-0 capitalize mt-1"}>{(latestRelease.status || latestRelease.distribution_status || "pending").replaceAll("_", " ")}</Badge></div>
-                <div><p className="text-xs text-muted-foreground">Play Sync Status</p><p className="font-medium mt-1 capitalize">{(latestRelease.play_sync_status || "pending").replaceAll("_", " ")}</p></div>
-                <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Distribution Targets</p><p className="font-medium mt-1">{latestRelease.distribution_targets?.length ? latestRelease.distribution_targets.join(", ") : "—"}</p></div>
-                {latestRelease.lyrics && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Lyrics</p><p className="text-sm mt-1 whitespace-pre-wrap max-h-40 overflow-auto">{latestRelease.lyrics}</p></div>}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div><p className="text-xs uppercase tracking-widest text-muted-foreground">Stream Performance</p><h2 className="text-xl font-bold mt-1">{getStreamCount().toLocaleString()}</h2><p className="text-sm text-muted-foreground mt-1">{streamPeriod === "daily" ? "Daily streams" : "Weekly streams"}</p></div>
-              <div className="inline-flex rounded-lg border border-border p-1"><button onClick={()=>setStreamPeriod("daily")} className={streamPeriod === "daily" ? "bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm" : "px-3 py-1.5 rounded-md text-sm text-muted-foreground"}>Daily</button><button onClick={()=>setStreamPeriod("weekly")} className={streamPeriod === "weekly" ? "bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm" : "px-3 py-1.5 rounded-md text-sm text-muted-foreground"}>Weekly</button></div>
-            </div>
-            <div className="mt-5 rounded-xl bg-muted/40 p-5 flex items-center gap-3"><BarChart3 className="w-5 h-5 text-primary"/><span className="text-sm text-muted-foreground">Streaming analytics use available stream data for this release; no stream data is fabricated when the provider has not supplied it.</span></div>
-          </section>
-        </div>
-      )}
-    </TabsContent>
-  );
 
   const handleReleaseUpdated = (updated) => {
     setReleases(prev => prev.map(r => r.id === updated.id ? updated : r));
@@ -257,15 +206,11 @@ function DistributionContent() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="plans">Plans & Pricing</TabsTrigger>
           <TabsTrigger value="upload">Upload Music</TabsTrigger>
           <TabsTrigger value="catalog">My Releases</TabsTrigger>
           <TabsTrigger value="manage">Distribution</TabsTrigger>
         </TabsList>
-
-        {/* Artist Distribution Overview */}
-        <Overview />
 
         {/* Plans */}
         <TabsContent value="plans">
