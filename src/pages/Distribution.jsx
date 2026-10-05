@@ -153,11 +153,9 @@ function DistributionContent() {
     return unsub;
   }, [toast]);
 
-  // Overview is always centered on the artist's most recently uploaded release.
-  // Use creation time first so a batch of releases uploaded today resolves to the last uploaded one.
   const latestRelease = [...releases].sort((a, b) => {
-    const aTime = new Date(a.created_date || a.created_at || a.release_date || 0).getTime();
-    const bTime = new Date(b.created_date || b.created_at || b.release_date || 0).getTime();
+    const aTime = new Date(a.release_date || a.created_date || a.created_at || 0).getTime();
+    const bTime = new Date(b.release_date || b.created_date || b.created_at || 0).getTime();
     return bTime - aTime;
   })[0] || null;
   const shareRelease = async () => {
@@ -253,7 +251,7 @@ function DistributionContent() {
 
   return (
     <div>
-      <PageHeader title="Xedruo Music Distribution" subtitle="Artist distribution overview" action={<Link to="/distribution/preflight" className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary">Preflight QC</Link>} />
+      <PageHeader title="Xedruo Distribution" subtitle="Distribute your music globally and keep 100% of your royalties." action={<Link to="/distribution/preflight" className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary">Preflight QC</Link>} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6">
