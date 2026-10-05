@@ -27,13 +27,32 @@ const auth = {
   async loginWithProvider(provider, options={}) { const callbackUrl=options.redirectTo || productionUrl('/auth/callback'); const {data,error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:callbackUrl}}); if(error) throw new Error(error.message); if(data?.url&&window.location.href!==data.url) window.location.assign(data.url); return data; },
   async refresh() { const {data,error}=await supabase.auth.refreshSession(); if(error) throw new Error(error.message); return data; },
 };
+const CORE_API_URL = import.meta.env.VITE_XEDRUO_CORE_API_URL || `${SUPABASE_URL}/functions/v1/xedruo-core-api`;
+
+async function coreApi(path, options = {}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) throw Object.assign(new Error('Not authenticated'), { status: 401 });
+  const response = await fetch(`${CORE_API_URL}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(body?.error || 'Xedruo Core API request failed'), { status: response.status, data: body });
+  return body;
+}
+
 const entity=(name)=>({
-  async list(sort='-created_date',limit=50){let query=supabase.from('xedruo_records').select('*').eq('entity',name); query=query.order('created_at',{ascending:!sort?.startsWith('-')}).limit(limit); const {data,error}=await query;if(error)throw error;return(data||[]).map(normalize);},
-  async filter(filters={},sort='-created_date',limit=50){let query=supabase.from('xedruo_records').select('*').eq('entity',name);for(const[key,value]of Object.entries(filters))query=query.eq(`data->>${key}`,String(value));query=query.order('created_at',{ascending:!sort?.startsWith('-')}).limit(limit);const{data,error}=await query;if(error)throw error;return(data||[]).map(normalize);},
-  async get(id){const{data,error}=await supabase.from('xedruo_records').select('*').eq('entity',name).eq('id',id).maybeSingle();if(error)throw error;if(!data)throw new Error('Record not found');return normalize(data);},
-  async create(payload){const{data:userData}=await supabase.auth.getUser();const{data,error}=await supabase.from('xedruo_records').insert({entity:name,owner_id:userData?.user?.id||null,data:payload}).select().single();if(error)throw error;return normalize(data);},
-  async update(id,patch){const current=await this.get(id);const next={...current};delete next.id;delete next.created_date;delete next.updated_date;const{data,error}=await supabase.from('xedruo_records').update({data:{...next,...patch},updated_at:new Date().toISOString()}).eq('entity',name).eq('id',id).select().single();if(error)throw error;return normalize(data);},
-  async delete(id){const{error}=await supabase.from('xedruo_records').delete().eq('entity',name).eq('id',id);if(error)throw error;},
+  async list(sort='-created_date',limit=50){return coreApi(`?entity=${encodeURIComponent(name)}&sort=${encodeURIComponent(sort)}&limit=${Math.min(Number(limit)||50,200)}`);},
+  async filter(filters={},sort='-created_date',limit=50){return coreApi(`?entity=${encodeURIComponent(name)}&filters=${encodeURIComponent(JSON.stringify(filters||{}))}&sort=${encodeURIComponent(sort)}&limit=${Math.min(Number(limit)||50,200)}`);},
+  async get(id){const data=await coreApi(`?entity=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}`);if(!data)throw new Error('Record not found');return data;},
+  async create(payload){return coreApi(`?entity=${encodeURIComponent(name)}`,{method:'POST',body:JSON.stringify(payload||{})});},
+  async update(id,patch){return coreApi(`?entity=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(patch||{})});},
+  async delete(id){await coreApi(`?entity=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}`,{method:'DELETE'});},
   async bulkUpdate(items=[]){return Promise.all(items.map(item=>this.update(item.id,item.data||item.patch||{})));},
   subscribe(callback,intervalMs=5000){if(typeof callback!=='function')return()=>{};const timer=window.setInterval(()=>callback(),intervalMs);return()=>window.clearInterval(timer);}
 });
