@@ -12,14 +12,16 @@ const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
 const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
 const isLocalHost = ['localhost','127.0.0.1','0.0.0.0'].includes(window.location.hostname);
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
+const MUSIC_DISTRIBUTION_ORIGIN = 'https://xedruo-music-distribution-xedruo-s-projects.vercel.app';
+const getExternalReturnTo = (value) => { try { const u = new URL(value); if (u.origin === MUSIC_DISTRIBUTION_ORIGIN && (u.pathname === '/' || u.pathname.startsWith('/distribution'))) return u.toString(); } catch {} return null; };
 
 export default function Register() {
   const location = useLocation(); const navigate = useNavigate();
-  const params = new URLSearchParams(location.search); const company = params.get('company');
+  const params = new URLSearchParams(location.search); const company = params.get('company'); const requestedReturnTo = getExternalReturnTo(params.get('returnTo'));
   const initialRole = params.get('role') === 'participant' ? 'participant' : 'fan';
   const [role,setRole]=useState(initialRole); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState('');
   const [showPassword,setShowPassword]=useState(false); const [showConfirm,setShowConfirm]=useState(false); const [error,setError]=useState(''); const [loading,setLoading]=useState(false);
-  const destination = company === 'sportruo' ? SPORTRUO_URL : company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard';
+  const destination = company === 'sportruo' ? SPORTRUO_URL : requestedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard');
   const saveSportruoRole = async () => { if (company !== 'sportruo') return; localStorage.setItem('sportruo_registration_role', role); try { await supabase.auth.updateUser({ data: { sportruo_role: role, sports_role: role } }); } catch (_) {} };
   const submit = async (e) => { e.preventDefault(); setError(''); if(password!==confirm){setError('Passwords do not match');return;} setLoading(true); try { localStorage.setItem(AUTH_RETURN_KEY,destination); const result=await xedruo.auth.register({email:email.trim(),password}); await saveSportruoRole(); if(result?.session) navigate('/onboarding',{replace:true}); else navigate(`/login${company?`?company=${encodeURIComponent(company)}`:''}`,{replace:true}); } catch(err){setError(err.message||'Registration failed');} finally{setLoading(false);} };
   const google = async () => { setError(''); setLoading(true); localStorage.setItem(AUTH_RETURN_KEY,destination); if(company==='sportruo') localStorage.setItem('sportruo_registration_role',role); try { if(isLocalHost){const target=new URL('/register',PRODUCTION_ORIGIN);if(company)target.searchParams.set('company',company);if(company==='sportruo')target.searchParams.set('role',role);window.location.replace(target.toString());return;} const callback=new URL('/auth/callback',PRODUCTION_ORIGIN); if(company==='sportruo') callback.searchParams.set('company','sportruo'); await xedruo.auth.loginWithProvider('google',{redirectTo:callback.toString()}); } catch(err){setError(err.message||'Google sign-up failed');setLoading(false);} };
