@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import PaymentModal from "@/components/app/PaymentModal";
 import DSPStatusTracker from "@/components/app/DSPStatusTracker";
 import DistributionManager, { PLATFORMS } from "@/components/distribution/DistributionManager";
+import { Link } from "react-router-dom";
 import { SkeletonList } from "@/components/app/SkeletonCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
@@ -108,7 +109,7 @@ function DistributionContent() {
       const ids = Array.from(selectedIds);
       await xedruo.entities.Release.bulkUpdate(ids.map(id => ({
         id,
-        status: "in_review",
+        status: "draft",\n        distribution_status: "preflight_pending",\n        preflight_confirmation_required: true,
         platforms: allStoreIds,
         territories: ["worldwide"],
         takedown_status: "none",
@@ -182,7 +183,7 @@ function DistributionContent() {
 
   return (
     <div>
-      <PageHeader title="Xedruo Distribution" subtitle="Distribute your music globally and keep 100% of your royalties." />
+      <PageHeader title="Xedruo Distribution" subtitle="Distribute your music globally and keep 100% of your royalties." action={<Link to="/distribution/preflight" className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary">Preflight QC</Link>} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6">
