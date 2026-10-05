@@ -12,7 +12,7 @@ const companies = [
   { slug: "properties", name: "Xedruo Properties", desc: "Real estate, property listings & services", icon: "🏠" },
   { slug: "spacetruo", name: "Spacetruo", desc: "Space, offices, venues & bookings", icon: "🏢" },
   { slug: "xedruo-ai", name: "Xedruo AI", desc: "AI tools, app building & intelligent workflows", icon: "✨" },
-  { slug: "distribution", name: "Xedruo Music Distribution", desc: "Independent music distribution platform — preserved as its own application", icon: "🎵", existing: true },
+  { slug: "distribution", name: "Xedruo Music", desc: "Music distribution, releases and artist performance", icon: "🎵", destination: "/music-dashboard" },
 ];
 
 export default function GroupLanding() {
