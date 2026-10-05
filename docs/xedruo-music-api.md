@@ -17,6 +17,9 @@ Partner adapters are configured server-side with environment variables. Credenti
 - `/search` — artists, releases and tracks
 - `/stream` — playback authorization/stream metadata
 - `/releases` — release metadata and distribution status
+- `/preflight/report` — retrieve a provider-generated Preflight QC report
+- `/preflight/refresh` — request a fresh Preflight QC analysis
+- `/preflight/confirm-review` — confirm a release after Xedruo completes its internal review
 - `/bookings` — artist booking workflows
 - `/tickets` — ticket discovery and purchase workflows
 - `/support` — artist support/fan-support workflows
@@ -33,3 +36,4 @@ Partner API keys and provider credentials are server-side only. Customer authori
 ## Partner connection status
 
 The adapter/gateway is implemented, but TuneCore and ONErpm cannot be marked live until their approved API credentials, scopes and partner endpoints are supplied/configured. The application will fail closed for an unconfigured provider.
+\n\n## Preflight QC\n\nPreflight QC is an internal Xedruo release-control stage. A release remains on hold until the configured QC provider returns an analysis. Xedruo reviews flagged matches, records feedback or supporting-document references, resolves blocking issues, and only then confirms the release for distribution review. Provider credentials and provider-specific implementation remain server-side.\n
