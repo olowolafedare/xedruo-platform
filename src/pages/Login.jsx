@@ -15,8 +15,9 @@ const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
 const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
+const MUSIC_DISTRIBUTION_ORIGIN = 'https://xedruo-music-distribution-xedruo-s-projects.vercel.app';
 const SAFE_RETURN_PATHS = new Set(['/','/company/music-distribution','/music-distribution','/company/pay-and-play','/pay-and-play','/pay-and-play/app','/pay-and-play/pay','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/hireuo','/hireuo','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
-const getSafeReturnPath = (value) => { if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null; const path = value.split('?')[0].split('#')[0]; if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|hireuo|healthruo|logistics|properties|spacetruo)(\/dashboard)?$/.test(path)) return value; return null; };
+const getSafeReturnPath = (value) => { if (!value || typeof value !== 'string') return null; try { const u = new URL(value, window.location.origin); if (u.origin === MUSIC_DISTRIBUTION_ORIGIN && (u.pathname === '/' || u.pathname.startsWith('/distribution'))) return u.toString(); } catch {} if (!value.startsWith('/') || value.startsWith('//')) return null; const path = value.split('?')[0].split('#')[0]; if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|hireuo|healthruo|logistics|properties|spacetruo)(\/dashboard)?$/.test(path)) return value; return null; };
 const isSportruoReturn = (value) => { const path = getSafeReturnPath(value); if (!path) return false; const pathname = path.split('?')[0].split('#')[0]; return pathname === '/company/sportruo' || pathname === '/sportruo' || pathname === '/company/sportruo/dashboard'; };
 const handoffToSportruo = (data) => { if (!data?.access_token) return false; const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) }); window.location.replace(`${SPORTRUO_URL}#${hash.toString()}`); return true; };
 
@@ -37,7 +38,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
-    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; window.location.href = destination; }
+    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; if (destination.startsWith('http')) window.location.replace(destination); else window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid email or password'); }
     finally { setLoading(false); }
   };
