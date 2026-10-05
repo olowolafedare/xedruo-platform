@@ -52,7 +52,8 @@ export default function DistributionPreflightQC() {
   const feedbackIssues = issues.filter(i => i.severity === "feedback" || i.type === "feedback");
   const status = selected?.distribution_status || "preflight_pending";
 
-  const canConfirm = status !== "blocked" && blocking.length === 0 && !selected?.preflight_confirmation_required;
+  const analysisReady = Boolean(qc.analysis_status === "complete" || qc.analyzed_at || qc.completed_at);
+  const canConfirm = status !== "blocked" && blocking.length === 0 && feedbackIssues.length === 0 && analysisReady;
 
   const save = async (nextStatus, extra = {}) => {
     if (!selected) return;
@@ -85,7 +86,7 @@ export default function DistributionPreflightQC() {
   };
 
   const confirmReview = async () => {
-    await save("ready_for_review", { preflight_confirmed_at: new Date().toISOString(), preflight_confirmed_by: "Xedruo Music Operations" });
+    await save("ready_for_review", { preflight_confirmation_required: false, preflight_confirmed_at: new Date().toISOString(), preflight_confirmed_by: "Xedruo Music Operations", preflight_licence_reference: licenceUrl || null });
   };
 
   const tabs = useMemo(() => [
@@ -132,7 +133,7 @@ export default function DistributionPreflightQC() {
 
           <div className="rounded-xl border border-border p-5">
             <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">Content-matching evidence</h3><p className="text-xs text-muted-foreground mt-1">Existing releases returned by the connected QC provider are shown here.</p></div><FileCheck2 className="w-5 h-5 text-primary" /></div>
-            {issues.length === 0 ? <div className="mt-4 rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground">No provider report is attached yet. The release remains on Preflight hold until analysis is available and Xedruo can review the result.</div> :
+            {issues.length === 0 ? <div className="mt-4 rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground">No provider report is attached yet. The release remains on Preflight hold until the QC analysis is available and Xedruo can review the result.</div> :
               <div className="mt-4 space-y-3">{issues.map((issue, i) => <div key={i} className="rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{issue.severity || issue.type || "review"}</Badge><span className="font-medium">{issue.title || "Potential content match"}</span></div>
                 <p className="text-sm text-muted-foreground mt-2">{issue.description || "Review the evidence before confirming this release."}</p>
