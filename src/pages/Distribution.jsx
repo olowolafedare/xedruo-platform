@@ -110,7 +110,9 @@ function DistributionContent() {
       const ids = Array.from(selectedIds);
       await xedruo.entities.Release.bulkUpdate(ids.map(id => ({
         id,
-        status: "draft",\n        distribution_status: "preflight_pending",\n        preflight_confirmation_required: true,
+        status: "draft",
+          distribution_status: "preflight_pending",
+          preflight_confirmation_required: true,
         platforms: allStoreIds,
         territories: ["worldwide"],
         takedown_status: "none",
