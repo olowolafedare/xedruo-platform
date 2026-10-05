@@ -153,7 +153,11 @@ function DistributionContent() {
     return unsub;
   }, [toast]);
 
-  const latestRelease = releases[0] || null;
+  const latestRelease = [...releases].sort((a, b) => {
+    const aTime = new Date(a.release_date || a.created_date || a.created_at || 0).getTime();
+    const bTime = new Date(b.release_date || b.created_date || b.created_at || 0).getTime();
+    return bTime - aTime;
+  })[0] || null;
   const shareRelease = async () => {
     if (!latestRelease) return;
     const shareUrl = latestRelease.share_url || (window.location.origin + "/distribution?release=" + latestRelease.id);
