@@ -72,13 +72,13 @@ export default function WelcomeXedruo() {
             </button>
           </div>
 
-          {/* Download / Open Pay & Play */}
+          {/* Download / Open Xedruo Pay/Bank */}
           <div className="mt-6 rounded-2xl p-5 bg-card border border-border">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-xl">💳</div>
               <div>
                 <div className="font-semibold text-sm">Xedruo Pay/Bank</div>
-                <div className="text-xs text-muted-foreground">Bank, payments & Pay & Play</div>
+                <div className="text-xs text-muted-foreground">Bank & payments</div>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
