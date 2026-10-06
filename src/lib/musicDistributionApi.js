@@ -1,4 +1,4 @@
-// Server-side distribution API contract. Pay & Play is intentionally excluded.
+// Server-side distribution API contract.
 export const EXTERNAL_DSP_TARGETS = [
   'spotify','apple_music','tidal','youtube_music','amazon_music','boomplay',
   'audiomack','deezer','soundcloud','pandora','anghami'
@@ -20,7 +20,7 @@ export function toDistributionApiPayload(release={}) {
     audio_url: release.audio_url || null,
     lyrics: release.lyrics || null,
     territories: release.territories || ['worldwide'],
-    targets: (release.distribution_targets || EXTERNAL_DSP_TARGETS).filter(x => x !== 'pay_and_play'),
+    targets: release.distribution_targets || EXTERNAL_DSP_TARGETS,
     source: 'xedruo_music_distribution',
     play_sync: true,
   };
