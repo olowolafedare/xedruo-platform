@@ -12,8 +12,6 @@ const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
 const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
 const isLocalHost = ['localhost','127.0.0.1','0.0.0.0'].includes(window.location.hostname);
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
-const MUSIC_DISTRIBUTION_ORIGIN = 'https://xedruo-music-distribution-xedruo-s-projects.vercel.app';
-const getExternalReturnTo = (value) => { try { const u = new URL(value); if (u.origin === MUSIC_DISTRIBUTION_ORIGIN && (u.pathname === '/' || u.pathname.startsWith('/distribution'))) return u.toString(); } catch {} return null; };
 
 export default function Register() {
   const location = useLocation(); const navigate = useNavigate();
