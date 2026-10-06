@@ -9,7 +9,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 const navGroups = [
   { label: "Dashboard", items: [{ label: "Overview", to: "/dashboard", icon: LayoutGrid }] },
-  { label: "Music", items: [{ label: "Artist Catalog", to: "/artist-catalog", icon: Library }, { label: "Distribution", to: "/distribution", icon: Radio }, { label: "Promotion", to: "/promotion", icon: Megaphone }, { label: "Producer Suite", to: "/producer-suite", icon: Music4 }, { label: "Publishing", to: "/publishing", icon: BookOpen }, { label: "Royalties", to: "/royalties", icon: DollarSign }] },
+  { label: "Music", items: [{ label: "Artist Catalog", to: "/artist-catalog", icon: Library }, { label: "Promotion", to: "/promotion", icon: Megaphone }, { label: "Producer Suite", to: "/producer-suite", icon: Music4 }, { label: "Publishing", to: "/publishing", icon: BookOpen }, { label: "Royalties", to: "/royalties", icon: DollarSign }] },
   { label: "Business", items: [{ label: "Creator Payments", to: "/creator-payments", icon: Wallet }, { label: "Sell Tickets", to: "/sell-tickets", icon: Ticket }, { label: "Creator Store", to: "/creator-store", icon: ShoppingBag }, { label: "Label Dashboard", to: "/label-dashboard", icon: Building2 }, { label: "Book a Studio", to: "/book-studio", icon: Mic }] },
   { label: "Profile & Tools", items: [{ label: "Artist Profile", to: "/artist-management", icon: User }, { label: "Invest", to: "/invest", icon: TrendingUp }] },
   { label: "Account", items: [{ label: "Notifications", to: "/notifications", icon: Bell }, { label: "KYC & Security", to: "/kyc", icon: Shield }, { label: "Support", to: "/support", icon: LifeBuoy }] },
