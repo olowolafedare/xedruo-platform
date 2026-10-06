@@ -1,7 +1,6 @@
 import React from 'react';
 
 const companies = [
-  { id: 1, name: 'Xedruo Pay & Play', description: 'Payments, wallet & commerce' },
   { id: 2, name: 'Sportruo', description: 'Global sports ecosystem' },
   { id: 3, name: 'Hireuo', description: 'Jobs, recruitment & workforce' },
   { id: 4, name: 'Adom', description: 'Advertising & campaigns' },
