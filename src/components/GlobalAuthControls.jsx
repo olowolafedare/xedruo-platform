@@ -12,7 +12,7 @@ export default function GlobalAuthControls() {
   if (isLoadingAuth || hiddenRoutes.some((route) => location.pathname === route)) return null;
 
   // App dashboards already provide their own account/logout controls.
-  if (location.pathname === '/dashboard' || /\/dashboard$/.test(location.pathname) || location.pathname.startsWith('/pay-and-play/app')) return null;
+  if (location.pathname === '/dashboard' || /\/dashboard$/.test(location.pathname)) return null;
 
   if (user) {
     return (
