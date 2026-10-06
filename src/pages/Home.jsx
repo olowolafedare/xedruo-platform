@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import Footer from "@/components/marketing/Footer";
 
 const products = [
-  { icon: "🎵", title: "Distribution", desc: "Distribute your music to 150+ stores worldwide. Keep 100% of your royalties.", to: "/distribution" },
   { icon: "📢", title: "Promotion", desc: "Expert campaigns across Spotify, TikTok, Apple Music, and more.", to: "/promotion" },
   { icon: "🎹", title: "Producer Suite", desc: "Upload beats, set your price, and earn 80% on every sale.", to: "/producer-suite" },
   { icon: "💳", title: "Creator Payments", desc: "Creator wallet, payment links, invoices and royalty management.", to: "/creator-payments" },
