@@ -1,16 +1,16 @@
 // The Xedruo customer ecosystem: 13 standalone companies.
-// #01 Xedruo Pay/Bank contains Banking, Payments and Pay & Play — Pay & Play is NOT a separate customer account.
+// #01 Xedruo Pay/Bank contains banking and payment services.
 // #13 Music Distribution is the existing application — never rebuilt or merged.
 export const companies = [
   {
     num: "01",
     slug: "pay-bank",
     name: "Xedruo Pay/Bank",
-    tagline: "Bank, payments & Pay & Play",
+    tagline: "Bank & payments",
     icon: "💳",
     color: "#22c55e",
     route: "/company/pay-bank",
-    desc: "Xedruo bank and payments, with Pay & Play inside — music, artists, events and tickets.",
+    desc: "Xedruo banking, payments, accounts and transfers.",
   },
   {
     num: "02",
