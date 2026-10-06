@@ -122,16 +122,6 @@ export const companies = [
     route: "/company/spacetruo",
     desc: "Book offices, event and meeting spaces by availability.",
   },
-  {
-    num: "13",
-    slug: "music-distribution",
-    name: "Xedruo Music Distribution",
-    tagline: "Existing application — do not touch",
-    icon: "🎵",
-    color: "#a855f7",
-    route: "/distribution",
-    desc: "Existing standalone platform. Never rebuilt, replaced or merged.",
-  },
 ];
 
 // Management card — Parent Company (internal, staff only). Customers have no access.
