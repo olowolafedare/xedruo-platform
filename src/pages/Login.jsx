@@ -33,7 +33,7 @@ export default function Login() {
   const [mode, setMode] = useState('password');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const destination = sportruoContext ? SPORTRUO_URL : company === 'pay-and-play' ? '/pay-and-play/app' : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/dashboard');
+  const destination = sportruoContext ? SPORTRUO_URL : company === 'pay-and-play' ? '/pay-and-play/app' : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
