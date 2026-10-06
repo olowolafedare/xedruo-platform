@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-// Generates a globally-unique 10-digit Xedruo ID (= Pay & Play account number).
+// Generates a globally-unique 10-digit Xedruo ID.
 // Runs as the calling user; uses the service role only to read existing IDs
 // across all users so the same number is never issued twice.
 export default async function(req) {
