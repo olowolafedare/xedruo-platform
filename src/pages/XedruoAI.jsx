@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from 'react';
 import {Link} from 'react-router-dom';
-import {Activity,ArrowRight,BriefcaseBusiness,Building2,HeartPulse,Home,MessageCircle,ShieldCheck,Sparkles,Truck,Users,Wallet} from 'lucide-react';
+import {Activity,ArrowRight,BriefcaseBusiness,Building2,HeartPulse,Home,MessageCircle,ShieldCheck,Sparkles,Truck,Users} from 'lucide-react';
 import {useAuth} from '@/lib/AuthContext';
 
 const companyTools=[
@@ -9,7 +9,6 @@ const companyTools=[
   ['Healthruo','Health navigation, appointments and personal health organization.','/healthruo',HeartPulse],
   ['Xedruo Properties','Find, rent, buy and manage property and rooms.','/properties',Home],
   ['Xedruo Logistics','Rides, delivery, fleet and shipment services.','/logistics',Truck],
-  ['Pay & Play','Access Xedruo services, payments and experiences.','/pay-and-play',Wallet],
 ];
 const quick=['Help me find a Xedruo service','How do I create a Xedruo account?','Which Xedruo company can help me get a job?','How can I list a house or room for rent?','How can I book a ride or send a package?'];
 function answer(q){const s=q.toLowerCase();if(s.includes('job')||s.includes('cv')||s.includes('career'))return 'Hireuo helps people find local and international opportunities, improve CVs and manage job applications.';if(s.includes('property')||s.includes('house')||s.includes('room')||s.includes('rent'))return 'Xedruo Properties lets owners list whole properties or individual rooms/units, set prices and manage availability.';if(s.includes('ride')||s.includes('delivery')||s.includes('package')||s.includes('logistics'))return 'Xedruo Logistics supports rides, local delivery, fleet services and international shipment coordination.';if(s.includes('sport')||s.includes('match')||s.includes('prediction'))return 'Sportruo brings sports coverage, matches, predictions, athlete and organization tools across sports.';if(s.includes('health')||s.includes('pregnan')||s.includes('fertility')||s.includes('ovulation'))return 'Healthruo helps people organize appointments, health records and personal tracking, including cycle, fertility and pregnancy information.';if(s.includes('account')||s.includes('login')||s.includes('xedruo id'))return 'Use your Unified Xedruo ID to sign in across supported Xedruo services.';return 'I can help you navigate Xedruo, discover the right company, understand a service, or get started with a Xedruo platform.'}
