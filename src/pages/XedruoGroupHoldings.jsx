@@ -10,7 +10,6 @@ const companies = [
   { id: 8, name: 'Xedruo Logistics', description: 'Logistics, delivery & tracking' },
   { id: 9, name: 'Xedruo Properties', description: 'Real estate, property listings & services' },
   { id: 10, name: 'Spacetruo', description: 'Space, offices, venues & bookings' },
-  { id: 11, name: 'Xedruo Music Distribution', description: 'Independent music distribution' },
   { id: 12, name: 'Xedruo AI Elinit', description: 'AI products & intelligence' },
 ];
 
