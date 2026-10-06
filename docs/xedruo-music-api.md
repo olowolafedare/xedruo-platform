@@ -27,7 +27,7 @@ Partner adapters are configured server-side with environment variables. Credenti
 
 ## Identity
 
-Every customer uses the same Xedruo identity and 10-digit Xedruo account number across services. Country selection determines the display/base currency for Pay & Play.
+Every customer uses the same Xedruo identity and 10-digit Xedruo account number across services. Country selection determines the display/base currency for supported payment flows.
 
 ## Security
 
