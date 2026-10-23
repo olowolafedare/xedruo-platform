@@ -2,8 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SBS-hnI6lAOdi5UnrLu2HA_GlvG0_av';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' } });
-const AUTH_PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
-const productionUrl = (path = '/') => new URL(path, AUTH_PRODUCTION_ORIGIN).toString();
+import { appUrl as productionUrl } from '@/lib/appOrigin';
 const getProfile = async (user) => { if (!user) return null; const { data } = await supabase.from('profiles').select('full_name,avatar_url,role').eq('id', user.id).maybeSingle(); return data || null; };
 const auth = {
   async me() { const { data, error } = await supabase.auth.getUser(); if (error || !data?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profile = await getProfile(data.user); return { ...data.user, role: profile?.role || data.user.app_metadata?.role || 'user', name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email, full_name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || null, avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || null, phone: data.user.phone || null, phone_confirmed_at: data.user.phone_confirmed_at || null }; },

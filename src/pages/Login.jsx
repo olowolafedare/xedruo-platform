@@ -10,9 +10,8 @@ import AuthLayout from '@/components/AuthLayout';
 import GoogleIcon from '@/components/GoogleIcon';
 import { toast } from '@/components/ui/use-toast';
 
-const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
+import { appOrigin } from '@/lib/appOrigin';
 const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
-const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
 const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/hireuo','/hireuo','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
@@ -63,8 +62,7 @@ export default function Login() {
     try {
       localStorage.setItem(AUTH_RETURN_KEY, destination);
       if (sportruoContext) localStorage.setItem('xedruo_oauth_company', 'sportruo'); else if (company) localStorage.setItem('xedruo_oauth_company', company);
-      if (isLocalHost) { const target = new URL('/login', PRODUCTION_ORIGIN); if (sportruoContext) target.searchParams.set('company', 'sportruo'); else if (company) target.searchParams.set('company', company); else target.searchParams.set('returnTo', destination); window.location.replace(target.toString()); return; }
-      const callback = new URL('/auth/callback', PRODUCTION_ORIGIN); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
+      const callback = new URL('/auth/callback', appOrigin()); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
     } catch (err) { localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false); }
   };
 
