@@ -2,33 +2,27 @@
 
 ## Project Context
 
-This is a Base44 app repository. Treat it as user-owned application code, keep changes focused on the user's request, and preserve existing project conventions.
+This is the Xedruo Group Holdings platform. It was originally generated on Base44 but has been **migrated to GitHub + Vercel + Supabase**. **Supabase is the backend** (Auth, Postgres, Storage, Edge Functions). Do not use the Base44 CLI/SDK for new work; the `base44/` folder is legacy reference only.
 
-Start with `README.md` for local setup, environment variables, and publish workflow.
+Start with `README.md` for local setup and environment variables.
 
-## Base44 References
+## Backend: Supabase
 
-- CLI overview: https://docs.base44.com/developers/references/cli/get-started/overview.md
-- Agent skills: https://docs.base44.com/developers/backend/overview/skills.md
-
-If your agent supports Agent Skills, install or update Base44 skills before Base44-specific work:
-
-```bash
-npx skills add base44/skills
-```
+- Auth: Supabase Auth (email/password, email OTP, phone OTP, Google OAuth with PKCE).
+- Data: Supabase Postgres. Staff/user roles live in `public.profiles.role`.
+- API: Supabase Edge Function `xedruo-core-api` (entity CRUD used by `xedruo.entities.*`).
+- Storage: Supabase Storage (`xedruo-media` bucket).
+- Authorization must be enforced with RLS / server-side checks. Never trust `user_metadata` for roles (users can edit it).
 
 ## Key Files
 
-- `src/`: frontend application source.
-- `src/api/base44Client.js`: frontend Base44 SDK client.
-- `vite.config.js`: Vite config and Base44 Vite plugin setup.
-- `.env.local`: local-only environment values; never commit secrets.
+- `src/api/xedruoClient.js`: Supabase client and the `xedruo` API wrapper (auth, entities, uploads).
+- `src/lib/AuthContext.jsx`: global auth state.
+- `src/pages/ParentLogin.jsx`, `src/pages/ParentCompany.jsx`: staff/admin portal (`/parent-company`).
+- `.env.local`: local-only values; never commit secrets.
 
 ## Working Notes
 
-- Use `base44 dev` as the default local development command when you need the local Base44 backend. It can run the backend and frontend together.
-- When docs or code mention the frontend being started automatically, that usually means the Base44 project config includes `site.serveCommand`, for example `"serveCommand": "npm run dev"` in `base44/config.jsonc`.
-- Use `npm run dev` only for frontend-only work against the hosted Base44 backend.
-- Prefer the existing Base44 CLI workflow over adding new npm scripts for Base44-specific tasks.
-- Reuse the existing SDK client and Vite plugin patterns before adding new Base44 integration paths.
-- Run the relevant checks from `package.json` before finishing code changes.
+- Use `npm run dev` / `npm run build` / `npm run lint`.
+- Staff roles: governor, ceo, cfo, developer, customer_service, operations.
+- Keep changes focused and preserve existing conventions.

@@ -29,9 +29,10 @@ export const AuthProvider = ({ children }) => {
       if (session?.user) {
         // The callback owns the PKCE exchange; this listener keeps the app's
         // global auth context synchronized immediately after that exchange.
-        setUser(session.user);
         setIsAuthenticated(true);
         setAuthError(null);
+        // Re-load via me() so profile role / staff_role are kept (raw session.user has neither).
+        setTimeout(() => { xedruo.auth.me().then(setUser).catch(() => setUser(session.user)); }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);

@@ -22,7 +22,7 @@ export default function ParentLogin() {
     try {
       await xedruo.auth.loginViaEmailPassword(email.trim(), password);
       const me = await xedruo.auth.me();
-      const role = me?.role || me?.app_metadata?.role || me?.user_metadata?.staff_role;
+      const role = me?.staff_role;
       if (!STAFF_ROLES.has(role)) {
         await xedruo.auth.logout();
         throw new Error("This account is not authorized for the Xedruo Parent Company.");
