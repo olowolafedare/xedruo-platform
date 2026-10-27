@@ -1,7 +1,8 @@
-// Single source of truth for "which origin should auth flows return to".
-// - On localhost / 127.0.0.1 / 0.0.0.0 we stay on the local origin so dev works locally.
-// - Everywhere else we use the production origin (unchanged behaviour).
-export const PRODUCTION_ORIGIN = 'https://xedruo-platform.vercel.app';
+// Single source of truth for the origin used by Xedruo authentication callbacks.
+// Use the official custom domain: Vercel deployment URLs may be protected by
+// team SSO and can send users to a holding/login screen instead of the app.
+// Local development remains on its local origin.
+export const PRODUCTION_ORIGIN = 'https://xedruo.com';
 
 export const isLocalHost = () =>
   typeof window !== 'undefined' &&
