@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/xedruoClient';
 import { saveCustomerContact } from '@/lib/xedruoIdentity';
-const SPORTRUO_URL='https://sportruo-lcrv5o.v2.appdeploy.ai/';
+const SPORTRUO_URL='https://sportruo.vercel.app/';
 const AUTH_RETURN_KEY='xedruo_oauth_return_to';
 const safeReturnPath=(value)=>typeof value==='string'&&value.startsWith('/')&&!value.startsWith('//')?value:'/';
 async function completeOAuthSession(){const url=new URL(window.location.href);const existing=await supabase.auth.getSession();if(existing.data?.session?.user)return existing.data.session;const code=url.searchParams.get('code');const oauthError=url.searchParams.get('error_description')||url.searchParams.get('error');if(oauthError)throw new Error(decodeURIComponent(oauthError.replace(/\+/g,' ')));if(!code)throw new Error('Google did not return an authorization code.');const{data,error}=await supabase.auth.exchangeCodeForSession(code);if(error)throw error;if(!data?.session?.user)throw new Error('Google sign-in completed without an active session.');return data.session;}
