@@ -2,14 +2,13 @@ import React from 'react';
 
 const companies = [
   { id: 2, name: 'Sportruo', description: 'Global sports ecosystem' },
-  { id: 3, name: 'Hireuo', description: 'Jobs, recruitment & workforce' },
-  { id: 4, name: 'Adom', description: 'Advertising & campaigns' },
-  { id: 5, name: 'Healthruo', description: 'Health services, providers & care' },
-  { id: 6, name: 'Xedruo Education', description: 'Education, courses & learning' },
-  { id: 7, name: 'Xedruo Energy', description: 'Energy, solar & inverter solutions' },
-  { id: 8, name: 'Xedruo Logistics', description: 'Logistics, delivery & tracking' },
-  { id: 9, name: 'Xedruo Properties', description: 'Real estate, property listings & services' },
-  { id: 10, name: 'Spacetruo', description: 'Space, offices, venues & bookings' },
+  { id: 3, name: 'Adom', description: 'Advertising & campaigns' },
+  { id: 4, name: 'Healthruo', description: 'Health services, providers & care' },
+  { id: 5, name: 'Xedruo Education', description: 'Education, courses & learning' },
+  { id: 6, name: 'Xedruo Energy', description: 'Energy, solar & inverter solutions' },
+  { id: 7, name: 'Xedruo Logistics', description: 'Logistics, delivery & tracking' },
+  { id: 8, name: 'Xedruo Properties', description: 'Real estate, property listings & services' },
+  { id: 9, name: 'Spacetruo', description: 'Space, offices, venues & bookings' },
   { id: 12, name: 'Xedruo AI Elinit', description: 'AI products & intelligence' },
 ];
 
