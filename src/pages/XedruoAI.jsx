@@ -1,11 +1,10 @@
 import React,{useMemo,useState} from 'react';
 import {Link} from 'react-router-dom';
-import {Activity,ArrowRight,BriefcaseBusiness,Building2,HeartPulse,Home,MessageCircle,ShieldCheck,Sparkles,Truck,Users} from 'lucide-react';
+import {Activity,ArrowRight,Building2,HeartPulse,Home,MessageCircle,ShieldCheck,Sparkles,Truck,Users} from 'lucide-react';
 import {useAuth} from '@/lib/AuthContext';
 
 const companyTools=[
   ['Sportruo','Sports intelligence, matches, predictions and athlete insights.','/sportruo',Activity],
-  ['Hireuo','Jobs, CV improvement, applications and career support.','/hireuo',BriefcaseBusiness],
   ['Healthruo','Health navigation, appointments and personal health organization.','/healthruo',HeartPulse],
   ['Xedruo Properties','Find, rent, buy and manage property and rooms.','/properties',Home],
   ['Xedruo Logistics','Rides, delivery, fleet and shipment services.','/logistics',Truck],
