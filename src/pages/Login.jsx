@@ -66,7 +66,7 @@ export default function Login() {
     try {
       localStorage.setItem(AUTH_RETURN_KEY, destination);
       if (sportruoContext) localStorage.setItem('xedruo_oauth_company', 'sportruo'); else if (company) localStorage.setItem('xedruo_oauth_company', company);
-      const callback = new URL('/auth/callback', appOrigin()); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); else if (payAndPlayContext) callback.searchParams.set('company', 'pay-and-play'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
+      if (sportruoContext) { window.location.assign(`${SPORTRUO_URL}?auth=google`); return; } const callback = new URL('/auth/callback', appOrigin()); if (payAndPlayContext) callback.searchParams.set('company', 'pay-and-play'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
     } catch (err) { localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false); }
   };
 
