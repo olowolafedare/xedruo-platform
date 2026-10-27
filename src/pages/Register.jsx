@@ -9,7 +9,7 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { xedruo, supabase } from '@/api/xedruoClient';
 
 import { appOrigin } from '@/lib/appOrigin';
-const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
+const SPORTRUO_URL = 'https://sportruo.vercel.app/';
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 
 export default function Register() {
