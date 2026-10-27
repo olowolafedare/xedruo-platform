@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 
 import { appOrigin } from '@/lib/appOrigin';
 const SPORTRUO_URL = 'https://sportruo.vercel.app/';
+const PAY_AND_PLAY_URL = 'https://xedruo-pay-and-play.vercel.app/';
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
 const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
@@ -26,17 +27,18 @@ export default function Login() {
   const requestedReturnTo = getSafeReturnPath(params.get('returnTo'));
   const savedReturnTo = getSafeReturnPath(localStorage.getItem(LOGOUT_RETURN_KEY));
   const sportruoContext = company === 'sportruo' || isSportruoReturn(requestedReturnTo) || isSportruoReturn(savedReturnTo);
+  const payAndPlayContext = company === 'pay-and-play';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [mode, setMode] = useState('password');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const destination = sportruoContext ? SPORTRUO_URL : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
+  const destination = sportruoContext ? SPORTRUO_URL : payAndPlayContext ? PAY_AND_PLAY_URL : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
-    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; window.location.href = destination; }
+    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; if (payAndPlayContext && handoffToPayAndPlay(result)) return; window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid email or password'); }
     finally { setLoading(false); }
   };
@@ -52,17 +54,19 @@ export default function Login() {
   const verifyOtp = async () => {
     if (otpCode.length !== 6) { setError('Enter the 6-digit verification code'); return; }
     setError(''); setLoading(true);
-    try { const result = await xedruo.auth.verifyLoginOtp(email.trim(), otpCode); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; window.location.href = destination; }
+    try { const result = await xedruo.auth.verifyLoginOtp(email.trim(), otpCode); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; if (payAndPlayContext && handoffToPayAndPlay(result)) return; window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid or expired verification code'); }
     finally { setLoading(false); }
   };
+
+  const handoffToPayAndPlay = (data) => { if (!data?.access_token) return false; const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) }); window.location.replace(`${PAY_AND_PLAY_URL}#${hash.toString()}`); return true; };
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
     try {
       localStorage.setItem(AUTH_RETURN_KEY, destination);
       if (sportruoContext) localStorage.setItem('xedruo_oauth_company', 'sportruo'); else if (company) localStorage.setItem('xedruo_oauth_company', company);
-      const callback = new URL('/auth/callback', appOrigin()); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
+      const callback = new URL('/auth/callback', appOrigin()); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); else if (payAndPlayContext) callback.searchParams.set('company', 'pay-and-play'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
     } catch (err) { localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false); }
   };
 
