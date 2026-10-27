@@ -9,7 +9,6 @@ import { ensureXedruoId, linkCompany } from "@/lib/xedruoIdentity";
 
 const dashboards = {
   sportruo: { title: "Your Sports Dashboard", subtitle: "Follow fixtures, teams, players and results in one place.", nav: ["Overview", "Fixtures", "Live Scores", "Teams & Players", "News"], stats: [["Following", "0", "teams & players"], ["Upcoming", "0", "fixtures"], ["Alerts", "0", "sports alerts"], ["Saved", "0", "articles"]], cards: [{ title: "Upcoming fixtures", empty: "Your followed fixtures will appear here.", cta: "Explore fixtures" }, { title: "Your teams", empty: "Follow teams to personalize your sports feed.", cta: "Find teams" }] },
-  hireuo: { title: "Your Career Dashboard", subtitle: "Manage applications, jobs, candidates and your professional profile.", nav: ["Overview", "Find Jobs", "Applications", "Saved Jobs", "Profile"], stats: [["Applications", "0", "submitted"], ["Saved Jobs", "0", "saved positions"], ["Interviews", "0", "upcoming"], ["Profile", "0%", "completion"]], cards: [{ title: "Recommended jobs", empty: "Complete your profile to receive job recommendations.", cta: "Find jobs" }, { title: "Application activity", empty: "Your application updates will appear here.", cta: "View applications" }] },
   agruo: { title: "Your Agriculture Dashboard", subtitle: "Buy, sell and manage agricultural products and services.", nav: ["Overview", "Marketplace", "Orders", "My Listings", "Farm Profile"], stats: [["Orders", "0", "active orders"], ["Listings", "0", "your products"], ["Favorites", "0", "saved products"], ["Messages", "0", "unread"]], cards: [{ title: "Marketplace activity", empty: "Products and orders will appear here.", cta: "Browse marketplace" }, { title: "Your listings", empty: "List agricultural products or services to get started.", cta: "Add listing" }] },
   healthruo: { title: "Your Health Dashboard", subtitle: "Find providers, manage appointments and organize your health services.", nav: ["Overview", "Find Providers", "Appointments", "Services", "Records"], stats: [["Appointments", "0", "upcoming"], ["Providers", "0", "saved providers"], ["Requests", "0", "open requests"], ["Records", "0", "available records"]], cards: [{ title: "Upcoming appointments", empty: "Your scheduled appointments will appear here.", cta: "Find a provider" }, { title: "Saved providers", empty: "Save trusted providers for quick access.", cta: "Browse providers" }] },
   education: { title: "Your Learning Dashboard", subtitle: "Continue learning, track progress and earn certificates.", nav: ["Overview", "Courses", "My Learning", "Certificates", "Profile"], stats: [["Courses", "0", "enrolled"], ["Progress", "0%", "overall"], ["Certificates", "0", "earned"], ["Hours", "0", "learning"]], cards: [{ title: "Continue learning", empty: "Enroll in a course to start building your learning history.", cta: "Explore courses" }, { title: "Certificates", empty: "Completed-course certificates will appear here.", cta: "View certificates" }] },
@@ -23,7 +22,6 @@ const dashboards = {
 // Distinct customer-facing identity for each operating company. The shared Xedruo identity remains underneath.
 const brandThemes = {
   sportruo: { accent: "#f97316", accentSoft: "rgba(249,115,22,.15)", glow: "rgba(249,115,22,.24)", label: "SPORTS NETWORK", motif: "Matchday" },
-  hireuo: { accent: "#3b82f6", accentSoft: "rgba(59,130,246,.15)", glow: "rgba(59,130,246,.24)", label: "CAREER NETWORK", motif: "Career" },
   agruo: { accent: "#84cc16", accentSoft: "rgba(132,204,22,.15)", glow: "rgba(132,204,22,.22)", label: "AGRICULTURE MARKET", motif: "Harvest" },
   healthruo: { accent: "#06b6d4", accentSoft: "rgba(6,182,212,.15)", glow: "rgba(6,182,212,.22)", label: "HEALTH SERVICES", motif: "Care" },
   education: { accent: "#6366f1", accentSoft: "rgba(99,102,241,.15)", glow: "rgba(99,102,241,.22)", label: "LEARNING NETWORK", motif: "Learn" },
@@ -34,7 +32,7 @@ const brandThemes = {
   spacetruo: { accent: "#8b5cf6", accentSoft: "rgba(139,92,246,.15)", glow: "rgba(139,92,246,.22)", label: "SPACE & VENUES", motif: "Space" },
 };
 
-const slugAliases = { sports: "sportruo", sport: "sportruo", hire: "hireuo", agriculture: "agruo", health: "healthruo", education: "education", capital: "capital", energy: "energy", logistics: "logistics", property: "properties", properties: "properties", space: "spacetruo" };
+const slugAliases = { sports: "sportruo", sport: "sportruo", agriculture: "agruo", health: "healthruo", education: "education", capital: "capital", energy: "energy", logistics: "logistics", property: "properties", properties: "properties", space: "spacetruo" };
 
 export default function CompanyDashboard() {
   const { slug: rawSlug } = useParams();
