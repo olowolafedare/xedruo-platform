@@ -11,7 +11,7 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { toast } from '@/components/ui/use-toast';
 
 import { appOrigin } from '@/lib/appOrigin';
-const SPORTRUO_URL = 'https://sportruo-lcrv5o.v2.appdeploy.ai/';
+const SPORTRUO_URL = 'https://sportruo.vercel.app/';
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
 const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
