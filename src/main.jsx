@@ -8,5 +8,6 @@ import { startRetiredCompanyGuard } from '@/lib/retiredCompanyGuard'
 startRetiredCompanyGuard()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
+  
   <App />
 )

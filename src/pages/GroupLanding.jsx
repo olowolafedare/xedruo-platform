@@ -9,7 +9,6 @@ const companies = [
   { slug: "logistics", name: "Xedruo Logistics", desc: "Logistics, delivery & tracking", icon: "🚚" },
   { slug: "properties", name: "Xedruo Properties", desc: "Real estate, property listings & services", icon: "🏠" },
   { slug: "spacetruo", name: "Spacetruo", desc: "Space, offices, venues & bookings", icon: "🏢" },
-  { slug: "xedruo-ai", name: "Xedruo AI", desc: "AI tools, app building & intelligent workflows", icon: "✨" },
   {
   slug: "hireuo",
   name: "HIREUO",
