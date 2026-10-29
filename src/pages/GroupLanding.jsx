@@ -15,7 +15,7 @@ const companies = [
   name: "HIREUO",
   desc: "Jobs, careers, recruitment & talent discovery",
   icon: "💼",
-  destination: "https://hireuo.xedruo.com/",
+  destination: "https://xedruo-careers.vercel.app/",
 },
 ];
 
