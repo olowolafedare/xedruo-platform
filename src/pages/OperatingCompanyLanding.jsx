@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/AuthContext";
 
 const companies = {
   sportruo:{name:"Sportruo",label:"SPORTS NETWORK",icon:"⚽",accent:"#f97316",headline:"Everything sports, in one place.",description:"Follow fixtures, live scores, teams, players, competitions and sports news with Sportruo.",features:["Fixtures & results","Teams & player profiles","Sports news & competitions"]},
-  hireuo:{name:"Hireuo",label:"CAREER NETWORK",icon:"💼",accent:"#3b82f6",headline:"Find the right opportunity.",description:"Connect employers, candidates and talent through a modern hiring and workforce platform.",features:["Find jobs & opportunities","Recruitment & candidates","Professional profile"]},
   agruo:{name:"Agruo",label:"AGRICULTURE MARKET",icon:"🌾",accent:"#84cc16",headline:"Grow, trade and connect.",description:"A digital marketplace for farmers, agricultural products, services and buyers.",features:["Agricultural marketplace","Products & listings","Orders & farm services"]},
   healthruo:{name:"Healthruo",label:"HEALTH SERVICES",icon:"🩺",accent:"#06b6d4",headline:"Better access to care.",description:"Discover health providers, services and appointments through one connected platform.",features:["Find providers","Appointments & services","Personal health workspace"]},
   education:{name:"Xedruo Education",label:"LEARNING NETWORK",icon:"🎓",accent:"#6366f1",headline:"Learn without limits.",description:"Discover courses, build skills, track your learning and earn certificates.",features:["Courses & learning","Progress tracking","Certificates & profile"]},
@@ -15,7 +14,7 @@ const companies = {
   properties:{name:"Xedruo Properties",label:"REAL ESTATE",icon:"🏠",accent:"#f43f5e",headline:"Find your next place.",description:"Discover properties, save favorites, make enquiries and manage property activity.",features:["Browse properties","Save favorites","Listings & enquiries"]},
   spacetruo:{name:"Spacetruo",label:"SPACE & VENUES",icon:"🏢",accent:"#8b5cf6",headline:"Find the space for your moment.",description:"Discover and book offices, meeting rooms, venues and event spaces.",features:["Find spaces","Bookings","Favorites & profile"]}
 };
-const aliases={sports:"sportruo",sport:"sportruo",hire:"hireuo",agriculture:"agruo",health:"healthruo",property:"properties",space:"spacetruo"};
+const aliases={sports:"sportruo",sport:"sportruo",agriculture:"agruo",health:"healthruo",property:"properties",space:"spacetruo"};
 
 export default function OperatingCompanyLanding(){
   const { slug:raw }=useParams();

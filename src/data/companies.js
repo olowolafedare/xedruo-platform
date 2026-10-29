@@ -24,16 +24,6 @@ export const companies = [
   },
   {
     num: "03",
-    slug: "hireuo",
-    name: "Hireuo",
-    tagline: "Jobs, hiring & talent",
-    icon: "💼",
-    color: "#3b82f6",
-    route: "/company/hireuo",
-    desc: "Post jobs, search candidates, apply and track applications.",
-  },
-  {
-    num: "04",
     slug: "adom",
     name: "Adom",
     tagline: "Advertising & campaigns",
@@ -43,7 +33,7 @@ export const companies = [
     desc: "Create campaigns, target audiences and track performance.",
   },
   {
-    num: "05",
+    num: "04",
     slug: "agruo",
     name: "Agruo",
     tagline: "Agriculture marketplace",
@@ -53,7 +43,7 @@ export const companies = [
     desc: "Farm products, agricultural services and marketplace orders.",
   },
   {
-    num: "06",
+    num: "05",
     slug: "healthruo",
     name: "Healthruo",
     tagline: "Health services & providers",
@@ -63,7 +53,7 @@ export const companies = [
     desc: "Discover providers, request appointments and manage health.",
   },
   {
-    num: "07",
+    num: "06",
     slug: "education",
     name: "Xedruo Education",
     tagline: "Courses & learning",
@@ -73,7 +63,7 @@ export const companies = [
     desc: "Enroll in courses, track progress and earn certificates.",
   },
   {
-    num: "08",
+    num: "07",
     slug: "capital",
     name: "Xedruo Capital",
     tagline: "Investments & portfolio",
@@ -83,7 +73,7 @@ export const companies = [
     desc: "Investment opportunities, portfolio and financial statements.",
   },
   {
-    num: "09",
+    num: "08",
     slug: "energy",
     name: "Xedruo Energy",
     tagline: "Energy services & orders",
@@ -93,7 +83,7 @@ export const companies = [
     desc: "Energy products, service requests and billing.",
   },
   {
-    num: "10",
+    num: "09",
     slug: "logistics",
     name: "Xedruo Logistics",
     tagline: "Delivery & tracking",
@@ -103,7 +93,7 @@ export const companies = [
     desc: "Request deliveries, track packages and manage shipments.",
   },
   {
-    num: "11",
+    num: "10",
     slug: "properties",
     name: "Xedruo Properties",
     tagline: "Buy, rent & sell",
@@ -113,7 +103,7 @@ export const companies = [
     desc: "Browse property listings, contact agents and save favorites.",
   },
   {
-    num: "12",
+    num: "11",
     slug: "spacetruo",
     name: "Spacetruo",
     tagline: "Offices & event spaces",

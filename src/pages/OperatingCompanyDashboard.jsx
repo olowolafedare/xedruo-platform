@@ -4,7 +4,6 @@ import { ArrowLeft, Bell, LayoutDashboard, Search, Settings, HelpCircle, Activit
 
 const companies = {
   sportruo: { name: "Sportruo", label: "SPORTS NETWORK", icon: "⚽", accent: "#f97316", motif: "Matchday", subtitle: "Follow fixtures, teams, players and results in one place.", nav: ["Overview", "Fixtures", "Live Scores", "Teams & Players", "News"] },
-  hireuo: { name: "Hireuo", label: "CAREER NETWORK", icon: "💼", accent: "#3b82f6", motif: "Career", subtitle: "Manage applications, jobs, candidates and your professional profile.", nav: ["Overview", "Find Jobs", "Applications", "Saved Jobs", "Profile"] },
   agruo: { name: "Agruo", label: "AGRICULTURE MARKET", icon: "🌾", accent: "#84cc16", motif: "Harvest", subtitle: "Buy, sell and manage agricultural products and services.", nav: ["Overview", "Marketplace", "Orders", "My Listings", "Farm Profile"] },
   healthruo: { name: "Healthruo", label: "HEALTH SERVICES", icon: "🩺", accent: "#06b6d4", motif: "Care", subtitle: "Find providers, manage appointments and organize your health services.", nav: ["Overview", "Find Providers", "Appointments", "Services", "Records"] },
   education: { name: "Xedruo Education", label: "LEARNING NETWORK", icon: "🎓", accent: "#6366f1", motif: "Learn", subtitle: "Continue learning, track progress and earn certificates.", nav: ["Overview", "Courses", "My Learning", "Certificates", "Profile"] },
@@ -15,7 +14,7 @@ const companies = {
   spacetruo: { name: "Spacetruo", label: "SPACE & VENUES", icon: "🏢", accent: "#8b5cf6", motif: "Space", subtitle: "Discover, book and manage offices, meeting rooms and event spaces.", nav: ["Overview", "Find Spaces", "Bookings", "Favorites", "Profile"] },
 };
 
-const aliases = { sports: "sportruo", sport: "sportruo", hire: "hireuo", agriculture: "agruo", health: "healthruo", property: "properties", space: "spacetruo" };
+const aliases = { sports: "sportruo", sport: "sportruo", agriculture: "agruo", health: "healthruo", property: "properties", space: "spacetruo" };
 
 export default function OperatingCompanyDashboard() {
   const { slug: raw } = useParams();
