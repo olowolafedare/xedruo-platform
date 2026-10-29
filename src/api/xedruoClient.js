@@ -3,11 +3,24 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcq
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SBS-hnI6lAOdi5UnrLu2HA_GlvG0_av';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' } });
 import { appUrl as productionUrl } from '@/lib/appOrigin';
-const getProfile = async (user) => { if (!user) return null; const { data, error } = await supabase.from('profiles').select('full_name,avatar_url,role').eq('id', user.id).maybeSingle(); if (error) console.warn('[xedruo] Could not load profile/role from Supabase (check RLS on public.profiles):', error.message); return data || null; };
 const STAFF_ROLES = ['governor','ceo','cfo','developer','customer_service','operations'];
-const resolveStaffRole = (profileRole, appRole) => [profileRole, appRole].find((r) => STAFF_ROLES.includes(r)) || null;
+const getIdentityRecords = async (user) => {
+  if (!user) return null;
+  const [profileResult, accountResult, rolesResult] = await Promise.all([
+    supabase.from('profiles').select('full_name,avatar_url,bio').eq('id', user.id).maybeSingle(),
+    supabase.from('xedruo_accounts').select('status').eq('id', user.id).single(),
+    supabase.from('xedruo_user_roles').select('role').eq('user_id', user.id),
+  ]);
+  const error = profileResult.error || accountResult.error || rolesResult.error;
+  if (error) throw error;
+  return {
+    profile: profileResult.data,
+    status: accountResult.data.status,
+    roles: rolesResult.data.map(({ role }) => role),
+  };
+};
 const auth = {
-  async me() { const { data, error } = await supabase.auth.getUser(); if (error || !data?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profile = await getProfile(data.user); return { ...data.user, role: profile?.role || data.user.app_metadata?.role || 'user', staff_role: resolveStaffRole(profile?.role, data.user.app_metadata?.role), name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email, full_name: profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || null, avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || null, phone: data.user.phone || null, phone_confirmed_at: data.user.phone_confirmed_at || null }; },
+  async me() { const { data, error } = await supabase.auth.getUser(); if (error || !data?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const identity = await getIdentityRecords(data.user); if (!identity) throw new Error('Xedruo account identity is unavailable.'); const staffRole = STAFF_ROLES.find((role) => identity.roles.includes(role)) || null; return { ...data.user, role: identity.roles.includes('admin') ? 'admin' : 'user', staff_role: staffRole, account_status: identity.status, name: identity.profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email, full_name: identity.profile?.full_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || null, avatar_url: identity.profile?.avatar_url || data.user.user_metadata?.avatar_url || null, bio: identity.profile?.bio || null, phone: data.user.phone || null, phone_confirmed_at: data.user.phone_confirmed_at || null }; },
   async isAuthenticated() { try { await this.me(); return true; } catch { return false; } },
   async loginViaEmailPassword(email,password) { const {data,error}=await supabase.auth.signInWithPassword({email,password}); if(error) throw Object.assign(new Error(error.message),{status:error.status||401,data:error}); return data; },
   async sendLoginOtp(email) { const {data,error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true}}); if(error) throw Object.assign(new Error(error.message),{status:error.status||400,data:error}); return data; },
