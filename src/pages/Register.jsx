@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/AuthLayout';
 import GoogleIcon from '@/components/GoogleIcon';
 import { xedruo, supabase } from '@/api/xedruoClient';
+import { safeReturnTo } from '@/lib/authReturnTo';
 
 import { appOrigin } from '@/lib/appOrigin';
 const SPORTRUO_URL = 'https://sportruo.vercel.app/';
@@ -14,7 +15,7 @@ const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 
 export default function Register() {
   const location = useLocation(); const navigate = useNavigate();
-  const params = new URLSearchParams(location.search); const company = params.get('company'); const requestedReturnTo = getExternalReturnTo(params.get('returnTo'));
+  const params = new URLSearchParams(location.search); const company = params.get('company'); const requestedReturnTo = params.has('returnTo') ? safeReturnTo() : null;
   const initialRole = params.get('role') === 'participant' ? 'participant' : 'fan';
   const [role,setRole]=useState(initialRole); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState('');
   const [showPassword,setShowPassword]=useState(false); const [showConfirm,setShowConfirm]=useState(false); const [error,setError]=useState(''); const [loading,setLoading]=useState(false);
@@ -22,7 +23,7 @@ export default function Register() {
   const saveSportruoRole = async () => { if (company !== 'sportruo') return; localStorage.setItem('sportruo_registration_role', role); try { await supabase.auth.updateUser({ data: { sportruo_role: role, sports_role: role } }); } catch (_) {} };
   const submit = async (e) => { e.preventDefault(); setError(''); if(password!==confirm){setError('Passwords do not match');return;} setLoading(true); try { localStorage.setItem(AUTH_RETURN_KEY,destination); const result=await xedruo.auth.register({email:email.trim(),password}); await saveSportruoRole(); if(result?.session) navigate('/onboarding',{replace:true}); else navigate(`/login${company?`?company=${encodeURIComponent(company)}`:''}`,{replace:true}); } catch(err){setError(err.message||'Registration failed');} finally{setLoading(false);} };
   const google = async () => { setError(''); setLoading(true); localStorage.setItem(AUTH_RETURN_KEY,destination); if(company==='sportruo') localStorage.setItem('sportruo_registration_role',role); try {  const callback=new URL('/auth/callback',appOrigin()); if(company==='sportruo') callback.searchParams.set('company','sportruo'); await xedruo.auth.loginWithProvider('google',{redirectTo:callback.toString()}); } catch(err){setError(err.message||'Google sign-up failed');setLoading(false);} };
-  return <AuthLayout icon={UserPlus} title="Create your Xedruo account" subtitle={company==='sportruo'?'Choose your SPORTRUO experience. Your registration determines whether you enter as a Fan or Participant.':'Start with Google or email. After registration, we will ask for your country and phone verification.'} footer={<>Already have an account? <Link to={`/login${company?`?company=${encodeURIComponent(company)}`:''}`} className="text-primary font-medium hover:underline">Log in</Link></>}>
+  return <AuthLayout icon={UserPlus} footer={<>Already have an account? <Link to={`/login${company?`?company=${encodeURIComponent(company)}`:''}`} className="text-primary font-medium hover:underline">Log in</Link></>}>
     {company==='sportruo'&&<div className="mb-6"><Label>SPORTRUO experience</Label><div className="grid grid-cols-2 gap-2 mt-2 p-1 rounded-xl bg-muted"><button type="button" onClick={()=>setRole('fan')} className={`rounded-lg px-4 py-3 text-sm font-semibold ${role==='fan'?'bg-background shadow-sm':''}`}><span className="inline-flex items-center gap-2"><Ticket className="w-4 h-4"/> Fan</span></button><button type="button" onClick={()=>setRole('participant')} className={`rounded-lg px-4 py-3 text-sm font-semibold ${role==='participant'?'bg-background shadow-sm':''}`}><span className="inline-flex items-center gap-2"><UserRound className="w-4 h-4"/> Participant</span></button></div><p className="mt-2 text-xs text-muted-foreground">Fan and Participant are different experiences after registration.</p></div>}
     <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={google} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2"/>Continue with Google</Button>
     <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"/></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or email & password</span></div></div>
