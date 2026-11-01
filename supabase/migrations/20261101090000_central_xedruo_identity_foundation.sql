@@ -352,7 +352,7 @@ revoke all on public.xedruo_identity_event_outbox from public, anon, authenticat
 create or replace function private.enqueue_xedruo_identity_created()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = public, pg_temp
 as $$
 begin
@@ -383,7 +383,7 @@ create table if not exists public.xedruo_push_subscriptions (
   user_id uuid not null references auth.users(id) on delete cascade,
   company_slug text not null default 'xedruo'
     references public.xedruo_company_app_registry(company_slug) on update cascade on delete restrict,
-  endpoint text not null unique check (endpoint ~ '^https://'),
+  endpoint text not null check (endpoint ~ '^https://'),
   p256dh text not null check (length(p256dh) between 40 and 256),
   auth text not null check (length(auth) between 16 and 128),
   user_agent text,
@@ -391,7 +391,6 @@ create table if not exists public.xedruo_push_subscriptions (
   expiration_time timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(user_id, endpoint),
   unique(user_id, company_slug, endpoint)
 );
 
@@ -451,14 +450,12 @@ begin
     case when p_expiration_epoch_ms is null then null
          else to_timestamp(p_expiration_epoch_ms / 1000.0) end
   )
-  on conflict (endpoint) do update
+  on conflict (user_id, company_slug, endpoint) do update
     set p256dh = excluded.p256dh,
         auth = excluded.auth,
         active = true,
         expiration_time = excluded.expiration_time,
         updated_at = now()
-    where public.xedruo_push_subscriptions.user_id = v_user_id
-      and public.xedruo_push_subscriptions.company_slug = v_slug
   returning id into v_id;
 
   if v_id is null then
