@@ -1,64 +1,157 @@
 import { xedruo, supabase } from '@/api/xedruoClient';
 
-function generateCandidate() { return String(Math.floor(1000000000 + Math.random() * 9000000000)); }
-
+// Xedruo IDs are allocated only by the database RPC. The database generates
+// a random 10-digit suffix and enforces global uniqueness; never generate IDs
+// in the browser and never use a sequential counter.
 export async function getIdentity() {
   const me = await xedruo.auth.me();
-  const { data, error } = await supabase.from('xedruo_identity').select('xedruo_id,status,expires_at,verified_at').eq('user_id', me.id).maybeSingle();
+  const { data, error } = await supabase
+    .from('xedruo_identity')
+    .select('xedruo_id,country_code,status,kyc_status,kyc_level,phone_e164,phone_verified_at,verified_at,created_at')
+    .eq('user_id', me.id)
+    .maybeSingle();
   if (error) throw error;
-  return data || null;
+  return data ? { ...data, xedruoId: data.xedruo_id, expires_at: null } : null;
 }
 
-export async function ensureXedruoId({ temporary = true } = {}) {
+export async function ensureXedruoId({ countryCode } = {}) {
   const me = await xedruo.auth.me();
-  const { data: existing, error: readError } = await supabase.from('xedruo_identity').select('xedruo_id,status,expires_at,verified_at').eq('user_id', me.id).maybeSingle();
-  if (readError) throw readError;
-  if (existing?.xedruo_id) return { ...existing, xedruoId: existing.xedruo_id, created: false };
+  if (!me?.id) throw new Error('Authentication required.');
 
-  const { data: profile, error: profileError } = await supabase.from('xedruo_customer_profiles').select('phone_verified,phone_e164,country_code,country_name,kyc_status,kyc_level').eq('user_id', me.id).maybeSingle();
-  if (profileError) throw profileError;
-  if (!profile?.phone_verified || !profile?.phone_e164 || !profile?.country_code) throw new Error('Verify your phone number and select your country before receiving a Xedruo ID.');
-
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const candidate = generateCandidate();
-    const status = temporary ? 'temporary' : 'verified';
-    const expiresAt = temporary ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
-    const { data, error } = await supabase.from('xedruo_identity').insert({ user_id: me.id, xedruo_id: candidate, status, expires_at: expiresAt, verified_at: temporary ? null : new Date().toISOString() }).select('xedruo_id,status,expires_at,verified_at').single();
-    if (!error && data?.xedruo_id) {
-      await supabase.from('xedruo_customer_profiles').update({ xedruo_account_number: candidate, onboarding_started_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('user_id', me.id);
-      return { ...data, xedruoId: data.xedruo_id, created: true };
-    }
-    if (error?.code !== '23505') throw error;
+  let selectedCountry = String(countryCode || '').trim().toUpperCase();
+  if (!selectedCountry) {
+    // Preserve the country selected during legacy registration when available.
+    const { data: profile, error } = await supabase
+      .from('xedruo_customer_profiles')
+      .select('country_code')
+      .eq('user_id', me.id)
+      .maybeSingle();
+    if (error) throw error;
+    selectedCountry = String(profile?.country_code || '').trim().toUpperCase();
   }
-  throw new Error('Could not allocate a unique Xedruo ID. Please try again.');
-}
+  if (!/^[A-Z]{2}$/.test(selectedCountry)) {
+    throw new Error('Select your country before creating your Xedruo identity.');
+  }
 
-export async function promoteXedruoIdToVerified() {
-  const me = await xedruo.auth.me();
-  const { data: profile, error: profileError } = await supabase.from('xedruo_customer_profiles').select('kyc_status,kyc_level').eq('user_id', me.id).maybeSingle();
-  if (profileError) throw profileError;
-  if (profile?.kyc_status !== 'verified' || Number(profile?.kyc_level || 0) < 2) throw new Error('Complete the required regional KYC before receiving a permanent Xedruo ID.');
-  const { data, error } = await supabase.from('xedruo_identity').update({ status: 'verified', expires_at: null, verified_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('user_id', me.id).select('xedruo_id,status,expires_at,verified_at').single();
+  const { data, error } = await supabase.rpc('ensure_xedruo_identity', {
+    p_country_code: selectedCountry,
+  });
   if (error) throw error;
-  return data;
+  const identity = Array.isArray(data) ? data[0] : data;
+  if (!identity?.xedruo_id) throw new Error('Xedruo identity allocation did not return an ID.');
+
+  return {
+    ...identity,
+    xedruoId: identity.xedruo_id,
+    expires_at: null,
+    created: Boolean(identity.created),
+  };
 }
 
-export async function getXedruoId() { const identity = await getIdentity(); return identity?.xedruo_id || null; }
+// KYC is a separate compliance state. It must never be required to create,
+// retain, or promote the permanent identity itself.
+export async function promoteXedruoIdToVerified() {
+  const identity = await getIdentity();
+  if (!identity) throw new Error('Create your Xedruo identity first.');
+  return identity;
+}
+
+export async function getXedruoId() {
+  const identity = await getIdentity();
+  return identity?.xedruo_id || null;
+}
 
 export async function saveCustomerContact({ countryCode, countryName, phoneE164, phoneVerified = false }) {
   const me = await xedruo.auth.me();
-  const { error } = await supabase.from('xedruo_customer_profiles').update({ country_code: countryCode, country_name: countryName || null, phone_e164: phoneE164, phone_verified: Boolean(phoneVerified), updated_at: new Date().toISOString() }).eq('user_id', me.id);
+  const { error } = await supabase
+    .from('xedruo_customer_profiles')
+    .update({
+      country_code: countryCode,
+      country_name: countryName || null,
+      phone_e164: phoneE164,
+      phone_verified: Boolean(phoneVerified),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', me.id);
   if (error) throw error;
   return getIdentity();
 }
 
 export async function markPhoneVerified({ countryCode, countryName, phoneE164 }) {
-  const result = await saveCustomerContact({ countryCode, countryName, phoneE164, phoneVerified: true });
-  return result || ensureXedruoId({ temporary: true });
+  await saveCustomerContact({
+    countryCode,
+    countryName,
+    phoneE164,
+    phoneVerified: true,
+  });
+  // The ID is permanent and independent of KYC. Phone verification is handled
+  // by the authentication provider; this RPC only allocates/returns the ID.
+  return ensureXedruoId({ countryCode });
 }
 
-const COMPANY_SLUGS = { 'pay-bank':'xedruo', 'xedruo-ai':'xedruo-ai', education:'xedruo-education', capital:'xedruo-capital', energy:'xedruo-energy', logistics:'xedruo-logistics', properties:'xedruo-properties', spacetruo:'spacetruo', healthruo:'healthruo', agruo:'agruo', sportruo:'sportruo', adom:'adom', xedruo:'xedruo', 'group-holdings':'xedruo-group-holdings', 'xedruo-group-holdings':'xedruo-group-holdings' };
-export function canonicalCompanySlug(slug) { const value = String(slug || '').trim().toLowerCase(); return COMPANY_SLUGS[value] || value; }
-export async function linkCompany(slug) { const canonicalSlug = canonicalCompanySlug(slug); if (!canonicalSlug) return null; const me = await xedruo.auth.me(); if (!me?.id) throw new Error('Authentication required'); const { data, error } = await supabase.rpc('join_xedruo_company', { p_company_slug: canonicalSlug }); if (error) throw error; return data?.[0] || null; }
-export async function getCompanyMembership(slug) { const canonicalSlug = canonicalCompanySlug(slug); const me = await xedruo.auth.me(); const { data, error } = await supabase.from('xedruo_company_memberships').select('id,company_id,role,active,xedruo_companies(name,slug)').eq('user_id', me.id).eq('active', true).eq('xedruo_companies.slug', canonicalSlug).maybeSingle(); if (error) throw error; return data || null; }
-export async function getLinkedCompanies() { const me = await xedruo.auth.me(); const { data, error } = await supabase.from('xedruo_company_memberships').select('company_id,role,xedruo_companies(name,slug)').eq('user_id', me.id).eq('active', true); if (error) throw error; return (data || []).map(row => ({ id: row.company_id, role: row.role, name: row.xedruo_companies?.name, slug: row.xedruo_companies?.slug })).filter(c => c.slug); }
+const COMPANY_SLUGS = {
+  'pay-bank': 'xedruo',
+  'xedruo-ai': 'xedruo-ai',
+  education: 'xedruo-education',
+  capital: 'xedruo-capital',
+  energy: 'xedruo-energy',
+  logistics: 'xedruo-logistics',
+  properties: 'xedruo-properties',
+  spacetruo: 'spacetruo',
+  healthruo: 'healthruo',
+  agruo: 'agruo',
+  sportruo: 'sportruo',
+  adom: 'adom',
+  xedruo: 'xedruo',
+  'group-holdings': 'xedruo-group-holdings',
+  'xedruo-group-holdings': 'xedruo-group-holdings',
+};
+
+export function canonicalCompanySlug(slug) {
+  const value = String(slug || '').trim().toLowerCase();
+  return COMPANY_SLUGS[value] || value;
+}
+
+export async function linkCompany(slug) {
+  const canonicalSlug = canonicalCompanySlug(slug);
+  if (!canonicalSlug) return null;
+  const me = await xedruo.auth.me();
+  if (!me?.id) throw new Error('Authentication required');
+  const { data, error } = await supabase.rpc('join_xedruo_company', {
+    p_company_slug: canonicalSlug,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function getCompanyMembership(slug) {
+  const canonicalSlug = canonicalCompanySlug(slug);
+  const me = await xedruo.auth.me();
+  const { data, error } = await supabase
+    .from('xedruo_company_memberships')
+    .select('id,company_id,role,active,xedruo_companies(name,slug)')
+    .eq('user_id', me.id)
+    .eq('active', true)
+    .eq('xedruo_companies.slug', canonicalSlug)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+export async function getLinkedCompanies() {
+  const me = await xedruo.auth.me();
+  const { data, error } = await supabase
+    .from('xedruo_company_memberships')
+    .select('company_id,role,xedruo_companies(name,slug)')
+    .eq('user_id', me.id)
+    .eq('active', true);
+  if (error) throw error;
+  return (data || [])
+    .map(row => ({
+      id: row.company_id,
+      role: row.role,
+      name: row.xedruo_companies?.name,
+      slug: row.xedruo_companies?.slug,
+    }))
+    .filter(company => company.slug);
+}

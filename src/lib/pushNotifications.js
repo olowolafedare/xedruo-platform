@@ -10,36 +10,51 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
-export async function registerXedruoPush() {
+export async function registerXedruoPush(companySlug = 'xedruo') {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return { supported: false, status: 'unsupported' };
   }
   if (Notification.permission === 'denied') return { supported: true, status: 'denied' };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return { supported: true, status: 'no-session' };
+
   const registration = await navigator.serviceWorker.register('/xedruo-sw.js', { scope: '/' });
   const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   if (permission !== 'granted') return { supported: true, status: permission };
 
-  // Rotate an older subscription if the VAPID key changed. This prevents a
-  // subscription created with the previous Xedruo key from silently failing.
   let subscription = await registration.pushManager.getSubscription();
   if (subscription) {
-    try { await subscription.unsubscribe(); } catch { /* continue with a fresh subscription */ }
-    subscription = null;
+    const existingKey = subscription.options?.applicationServerKey;
+    const expectedKey = urlBase64ToUint8Array(XEDRUO_VAPID_PUBLIC_KEY);
+    const existingBytes = existingKey ? new Uint8Array(existingKey) : null;
+    const sameKey = existingBytes && existingBytes.length === expectedKey.length &&
+      existingBytes.every((value, index) => value === expectedKey[index]);
+    if (!sameKey) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
   }
-  subscription = await registration.pushManager.subscribe({
+
+  subscription ||= await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(XEDRUO_VAPID_PUBLIC_KEY),
   });
 
   const payload = subscription.toJSON();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return { supported: true, status: 'no-session' };
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL || 'https://ydhgxyklucrcqmivtvcu.supabase.co'}/functions/v1/xedruo-push-subscribe-v2`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ endpoint: payload.endpoint, keys: payload.keys }),
+  if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
+    throw new Error('The browser returned an incomplete push subscription');
+  }
+
+  const { error } = await supabase.rpc('register_xedruo_push_subscription', {
+    p_company_slug: companySlug,
+    p_endpoint: payload.endpoint,
+    p_p256dh: payload.keys.p256dh,
+    p_auth_secret: payload.keys.auth,
+    p_expiration_epoch_ms: subscription.expirationTime,
   });
-  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Could not register push notifications');
+  if (error) throw new Error(error.message || 'Could not register push notifications');
+
   return { supported: true, status: 'granted', subscription };
 }
 
