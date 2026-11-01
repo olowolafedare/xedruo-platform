@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 import ScrollToTop from './components/ScrollToTop'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import GlobalAuthControls from '@/components/GlobalAuthControls'
 import Login from './pages/Login'
 import ParentLogin from './pages/ParentLogin'
 import Register from './pages/Register'
@@ -83,7 +82,6 @@ function AuthenticatedApp() {
 
   return (
     <Suspense fallback={<Loading />}>
-      <GlobalAuthControls />
       <Routes>
         <Route path="/" element={<GroupLanding />} />
         <Route path="/ecosystem" element={<Navigate to="/" replace />} />
