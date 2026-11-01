@@ -228,7 +228,7 @@ declare
   v_country char(2) := upper(trim(p_country_code))::char(2);
   v_identity public.xedruo_identity%rowtype;
   v_calling_code text;
-  v_phone text := regexp_replace(trim(p_phone_e164), '[[:space:]()-]', '', 'g');
+  v_phone text := regexp_replace(trim(p_phone_e164), '[^+0-9]', '', 'g');
 begin
   if v_user_id is null then
     raise exception 'Authentication required' using errcode = '28000';
