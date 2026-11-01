@@ -37,7 +37,7 @@ export default function IdentityOnboarding() {
     const googleConfirmed=(authUser?.identities||[]).some(item=>item.provider==='google');
     if(!googleConfirmed) throw new Error('Confirm your Google account using Google sign-in in this company app before creating your Xedruo identity.');
     const {data}=await supabase.from('xedruo_identity').select('xedruo_id,country_code,phone_e164').eq('user_id',user.id).maybeSingle();
-    if(data){setIdentity(data);setCountry(data.country_code);setPhone(data.phone_e164||'');}
+    if(data){setCountry(data.country_code);setPhone(data.phone_e164||'');if(data.phone_e164)setIdentity(data);}
   }catch(e){setError(e.message||'Could not load identity registration.');}finally{setLoading(false);}})();},[user?.id]);
 
   useEffect(()=>{if(!dialCode)return;setPhone(current=>{const digits=digitsOnly(current);return dialCode+(digits.startsWith(digitsOnly(dialCode))?digits.slice(digitsOnly(dialCode).length):digits.replace(/^0/,''));});},[country]);
