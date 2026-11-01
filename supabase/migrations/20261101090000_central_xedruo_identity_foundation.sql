@@ -296,3 +296,81 @@ revoke all on function public.ensure_xedruo_company_profile(text, text) from pub
 grant execute on function public.ensure_xedruo_company_profile(text, text) to authenticated;
 revoke all on function public.set_xedruo_identity_phone(text, text) from public, anon;
 grant execute on function public.set_xedruo_identity_phone(text, text) to authenticated;
+
+
+-- Durable notification foundation. The outbox contains identity metadata only;
+-- phone numbers, OTPs, access tokens, and Google credentials are never queued.
+create table if not exists public.xedruo_company_app_registry (
+  company_slug text primary key check (company_slug ~ '^[a-z0-9][a-z0-9-]{1,62}$'),
+  display_name text not null,
+  app_origin text,
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.xedruo_company_app_registry(company_slug, display_name)
+values
+  ('xedruo', 'Xedruo'),
+  ('xedrion-ai', 'Xedrion AI'),
+  ('sportruo', 'Sportruo'),
+  ('healthruo', 'Healthruo'),
+  ('spacetruo', 'SpaceTruo'),
+  ('hireuo', 'Hireuo'),
+  ('xedruo-properties', 'Xedruo Properties'),
+  ('xedruo-music', 'Xedruo Music'),
+  ('pay-and-play', 'Pay & Play'),
+  ('adom-global-commerce', 'Adom Global Commerce'),
+  ('xedruo-global-logistics', 'Xedruo Global Logistics')
+on conflict (company_slug) do update
+  set display_name = excluded.display_name,
+      updated_at = now();
+
+create table if not exists public.xedruo_identity_event_outbox (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null check (event_type in ('identity.created')),
+  user_id uuid not null references auth.users(id) on delete restrict,
+  xedruo_id text not null references public.xedruo_identity(xedruo_id) on update cascade on delete restrict,
+  issuing_country char(2) not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  available_at timestamptz not null default now(),
+  attempts integer not null default 0 check (attempts >= 0),
+  processed_at timestamptz,
+  last_error text
+);
+
+create index if not exists xedruo_identity_outbox_pending_idx
+  on public.xedruo_identity_event_outbox(available_at, created_at)
+  where processed_at is null;
+
+alter table public.xedruo_company_app_registry enable row level security;
+alter table public.xedruo_identity_event_outbox enable row level security;
+revoke all on public.xedruo_company_app_registry from public, anon, authenticated;
+revoke all on public.xedruo_identity_event_outbox from public, anon, authenticated;
+
+create or replace function private.enqueue_xedruo_identity_created()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+begin
+  insert into public.xedruo_identity_event_outbox(
+    event_type, user_id, xedruo_id, issuing_country, payload
+  )
+  values (
+    'identity.created',
+    new.user_id,
+    new.xedruo_id,
+    new.country_code,
+    jsonb_build_object('event_version', 1)
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists xedruo_identity_created_outbox on public.xedruo_identity;
+create trigger xedruo_identity_created_outbox
+after insert on public.xedruo_identity
+for each row execute function private.enqueue_xedruo_identity_created();
