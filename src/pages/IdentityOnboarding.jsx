@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Clock3, Loader2, Phone, ShieldCheck, BellRing } from 'lucide-react';
+import { CheckCircle2, Loader2, Phone, ShieldCheck, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
