@@ -201,3 +201,56 @@ drop trigger if exists xedruo_identity_permanent_guard on public.xedruo_identity
 create trigger xedruo_identity_permanent_guard
 before update or delete on public.xedruo_identity
 for each row execute function public.prevent_xedruo_identity_reassignment();
+
+
+-- Phone number is collected and stored at registration, but SMS OTP is
+-- intentionally deferred. A phone number is not marked verified until a
+-- future OTP challenge succeeds.
+create or replace function public.set_xedruo_identity_phone(
+  p_country_code text,
+  p_phone_e164 text
+)
+returns table(xedruo_id text, country_code char(2), phone_e164 text, phone_verified_at timestamptz)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_country char(2) := upper(trim(p_country_code))::char(2);
+  v_identity public.xedruo_identity%rowtype;
+  v_phone text := regexp_replace(trim(p_phone_e164), '[[:space:]()-]', '', 'g');
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+  if v_country !~ '^[A-Z]{2}$' then
+    raise exception 'Select a valid two-letter country code' using errcode = '22023';
+  end if;
+  if v_phone !~ '^\+[1-9][0-9]{7,14}$' then
+    raise exception 'Enter a valid international phone number in E.164 format' using errcode = '22023';
+  end if;
+
+  select * into v_identity
+  from public.xedruo_identity
+  where user_id = v_user_id
+  for update;
+
+  if not found then
+    raise exception 'Create the central Xedruo identity before saving its phone number';
+  end if;
+  if v_identity.country_code <> v_country then
+    raise exception 'The original issuing country is permanent and cannot be changed';
+  end if;
+
+  update public.xedruo_identity
+  set phone_e164 = v_phone, updated_at = now()
+  where user_id = v_user_id
+  returning * into v_identity;
+
+  return query select v_identity.xedruo_id, v_identity.country_code, v_identity.phone_e164, v_identity.phone_verified_at;
+end;
+$$;
+
+revoke all on function public.set_xedruo_identity_phone(text, text) from public, anon;
+grant execute on function public.set_xedruo_identity_phone(text, text) to authenticated;
