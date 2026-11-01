@@ -1,1 +1,51 @@
-{"rewrites":[{"source":"/company/sportruo","destination":"/company/sportruo/dashboard"},{"source":"/sportruo","destination":"/company/sportruo/dashboard"},{"source":"/(.*)","destination":"/index.html"}]}
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "healthruo.vercel.app"
+        }
+      ],
+      "destination": "https://healthruo-standalone.vercel.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "xedruo-properties.vercel.app"
+        }
+      ],
+      "destination": "https://xedruo-properties-standalone.vercel.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "spacetruo.vercel.app"
+        }
+      ],
+      "destination": "https://spacetruo-standalone.vercel.app/:path*",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/company/sportruo",
+      "destination": "/company/sportruo/dashboard"
+    },
+    {
+      "source": "/sportruo",
+      "destination": "/company/sportruo/dashboard"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://healthruo-standalone.vercel.app/:path*",
+      "permanent": true
+    }
+  ]
+}
