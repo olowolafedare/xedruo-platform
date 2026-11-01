@@ -26,6 +26,8 @@ export default function IdentityOnboarding() {
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
+  const [googleConfirmed,setGoogleConfirmed]=useState(false);
+  const [googleConfirming,setGoogleConfirming]=useState(false);
   const filteredCountries=useMemo(()=>{const q=countrySearch.trim().toLowerCase();return q?COUNTRIES.filter(c=>c.name.toLowerCase().includes(q)||c.code.toLowerCase()===q):COUNTRIES;},[countrySearch]);
   const selected=COUNTRIES.find(c=>c.code===country);
   const dialCode=DIAL_CODES[country]||'';
@@ -34,13 +36,23 @@ export default function IdentityOnboarding() {
     if(!user?.id) throw new Error('Your sign-in session is not ready. Please sign in again.');
     const {data:{user:authUser},error:authError}=await supabase.auth.getUser();
     if(authError) throw authError;
-    const googleConfirmed=(authUser?.identities||[]).some(item=>item.provider==='google');
-    if(!googleConfirmed) throw new Error('Confirm your Google account using Google sign-in in this company app before creating your Xedruo identity.');
+    const hasGoogleIdentity=(authUser?.identities||[]).some(item=>item.provider==='google');
+    setGoogleConfirmed(hasGoogleIdentity);
     const {data}=await supabase.from('xedruo_identity').select('xedruo_id,country_code,phone_e164').eq('user_id',user.id).maybeSingle();
     if(data){setCountry(data.country_code);setPhone(data.phone_e164||'');if(data.phone_e164)setIdentity(data);}
   }catch(e){setError(e.message||'Could not load identity registration.');}finally{setLoading(false);}})();},[user?.id]);
 
   useEffect(()=>{if(!dialCode)return;setPhone(current=>{const digits=digitsOnly(current);return dialCode+(digits.startsWith(digitsOnly(dialCode))?digits.slice(digitsOnly(dialCode).length):digits.replace(/^0/,''));});},[country]);
+
+  const confirmGoogle=async()=>{
+    setError('');setGoogleConfirming(true);
+    try{
+      const {data,error:linkError}=await supabase.auth.linkIdentity({provider:'google',options:{redirectTo:window.location.href}});
+      if(linkError)throw linkError;
+      if(data?.url)window.location.assign(data.url);
+      else throw new Error('Google confirmation could not be started. Please try again.');
+    }catch(e){setError(e.message||'Google confirmation failed.');setGoogleConfirming(false);}
+  };
 
   const register=async()=>{
     setError('');
@@ -55,7 +67,9 @@ export default function IdentityOnboarding() {
     try{
       const {data:{user:authUser},error:authError}=await supabase.auth.getUser();
       if(authError)throw authError;
-      if(!(authUser?.identities||[]).some(item=>item.provider==='google'))throw new Error('Google account confirmation is required.');
+      const hasGoogleIdentity=(authUser?.identities||[]).some(item=>item.provider==='google');
+      setGoogleConfirmed(hasGoogleIdentity);
+      if(!hasGoogleIdentity)throw new Error('Confirm your Google account before creating your permanent Xedruo ID.');
       const created=await ensureXedruoId({countryCode:country});
       const {data:phoneData,error:phoneError}=await supabase.rpc('set_xedruo_identity_phone',{p_country_code:country,p_phone_e164:fullPhone});
       if(phoneError)throw phoneError;
@@ -70,5 +84,5 @@ export default function IdentityOnboarding() {
   const continueNext=()=>{localStorage.removeItem('xedruo_oauth_return_to');navigate('/dashboard',{replace:true});};
   if(loading)return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin"/></div>;
   if(identity)return <AuthLayout icon={ShieldCheck} title="Your Xedruo identity is ready" subtitle="Your registration is complete. Phone SMS verification will be added in a later release."><div className="rounded-2xl border bg-muted/30 p-5 space-y-3"><div className="flex items-center gap-3"><CheckCircle2 className="w-6 h-6 text-primary"/><div><p className="font-semibold">Permanent Xedruo ID</p><p className="text-2xl font-bold tracking-widest">{identity.xedruo_id}</p></div></div><p className="text-sm text-muted-foreground">Phone: {identity.phone_e164||phone}</p><p className="text-sm text-muted-foreground">Issuing country: {identity.country_code}</p><p className="text-xs text-muted-foreground">Your phone number is saved but is not yet marked as verified. SMS OTP will be enabled later. KYC remains separate.</p></div><Button className="w-full h-12 mt-5" onClick={continueNext}>Continue</Button></AuthLayout>;
-  return <AuthLayout icon={Phone} title="Complete your registration" subtitle="Confirm your Google account, select your original issuing country, and provide a phone number. SMS verification is temporarily deferred.">{error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<div className="space-y-4"><div className="space-y-2"><Label>Issuing country</Label><Input placeholder="Search country..." value={countrySearch} onChange={e=>setCountrySearch(e.target.value)}/><select aria-label="Select issuing country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e=>setCountry(e.target.value)}><option value="">Select country</option>{filteredCountries.map(c=><option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></div><div className="space-y-2"><Label htmlFor="identity-phone">Phone number</Label><div className="flex gap-2"><div className="w-24 shrink-0 flex items-center justify-center rounded-md border bg-muted/40 font-semibold text-sm">{dialCode||'+'}</div><Input id="identity-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={dialCode+' 8012345678'} value={digitsOnly(phone).replace(digitsOnly(dialCode),'').replace(/^0/,'')} onChange={e=>setPhone(dialCode+digitsOnly(e.target.value).replace(/^0/,''))}/></div><p className="text-xs text-muted-foreground">The selected country, phone calling code, and permanent Xedruo ID prefix must match. Your original issuing country cannot later be changed.</p></div><div className="rounded-lg border p-3 text-sm text-muted-foreground">Google account confirmation is required. SMS OTP is intentionally skipped for now; the phone number is still required and saved.</div><Button className="w-full h-12" onClick={register} disabled={saving||!country||!dialCode||!phone}>{saving?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Creating identity...</>:'Confirm Google & create Xedruo ID'}</Button></div></AuthLayout>;
+  return <AuthLayout icon={Phone} title="Complete your registration" subtitle="Confirm your Google account, select your original issuing country, and provide a phone number. SMS verification is temporarily deferred.">{error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<div className="space-y-4">{!googleConfirmed&&<div className="rounded-lg border p-3 space-y-2"><p className="text-sm font-medium">Google account confirmation required</p><p className="text-xs text-muted-foreground">Confirm Google in this app. Your existing Xedruo sign-in session will be linked rather than creating a second account.</p><Button type="button" variant="outline" className="w-full" onClick={confirmGoogle} disabled={googleConfirming}>{googleConfirming?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Connecting Google...</>:'Continue with Google'}</Button></div>}<div className="space-y-2"><Label>Issuing country</Label><Input placeholder="Search country..." value={countrySearch} onChange={e=>setCountrySearch(e.target.value)}/><select aria-label="Select issuing country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={e=>setCountry(e.target.value)}><option value="">Select country</option>{filteredCountries.map(c=><option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></div><div className="space-y-2"><Label htmlFor="identity-phone">Phone number</Label><div className="flex gap-2"><div className="w-24 shrink-0 flex items-center justify-center rounded-md border bg-muted/40 font-semibold text-sm">{dialCode||'+'}</div><Input id="identity-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={dialCode+' 8012345678'} value={digitsOnly(phone).replace(digitsOnly(dialCode),'').replace(/^0/,'')} onChange={e=>setPhone(dialCode+digitsOnly(e.target.value).replace(/^0/,''))}/></div><p className="text-xs text-muted-foreground">The selected country, phone calling code, and permanent Xedruo ID prefix must match. Your original issuing country cannot later be changed.</p></div><div className="rounded-lg border p-3 text-sm text-muted-foreground">Google account confirmation is required. SMS OTP is intentionally skipped for now; the phone number is still required and saved.</div><Button className="w-full h-12" onClick={register} disabled={saving||!googleConfirmed||!country||!dialCode||!phone}>{saving?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Creating identity...</>:'Confirm Google & create Xedruo ID'}</Button></div></AuthLayout>;
 }
