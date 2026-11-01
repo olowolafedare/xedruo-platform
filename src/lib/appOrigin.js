@@ -1,13 +1,14 @@
-// Single source of truth for the origin used by Xedruo authentication callbacks.
-// Use the official custom domain: Vercel deployment URLs may be protected by
-// team SSO and can send users to a holding/login screen instead of the app.
-// Local development remains on its local origin.
+// Resolve authentication callbacks against the app that initiated sign-in.
+// Xedruo products share an identity provider, but each product must return
+// users to its own host (for example, spacetruo.vercel.app or healthruo.vercel.app).
+// Using a single parent-company origin here sends every product back to xedruo.com.
 export const PRODUCTION_ORIGIN = 'https://xedruo.com';
 
 export const isLocalHost = () =>
   typeof window !== 'undefined' &&
   ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname);
 
-export const appOrigin = () => (isLocalHost() ? window.location.origin : PRODUCTION_ORIGIN);
+export const appOrigin = () =>
+  typeof window !== 'undefined' ? window.location.origin : PRODUCTION_ORIGIN;
 
 export const appUrl = (path = '/') => new URL(path, appOrigin()).toString();
