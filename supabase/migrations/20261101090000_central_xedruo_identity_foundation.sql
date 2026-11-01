@@ -1,4 +1,9 @@
 -- Central Xedruo Identity foundation.
+-- Privileged implementation functions live in a non-exposed schema. Public RPCs below are invoker wrappers.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+grant usage on schema private to authenticated;
+
 -- Safe additive migration: does not delete, rewrite, or merge existing user rows.
 -- IDs are permanent. KYC controls regulated feature access, never ID existence.
 
@@ -69,7 +74,7 @@ grant select on public.xedruo_company_profiles to authenticated;
 
 -- Allocate an ID in the database, not in browser JavaScript.
 -- Existing identities are returned unchanged; country cannot be silently changed.
-create or replace function public.ensure_xedruo_identity(p_country_code text)
+create or replace function private.ensure_xedruo_identity(p_country_code text)
 returns table(xedruo_id text, country_code char(2), status text, kyc_status text, created boolean)
 language plpgsql
 security definer
@@ -129,7 +134,7 @@ $$;
 
 -- Each product calls this after central authentication. Its profile remains
 -- separate from every other product profile and can only be created for self.
-create or replace function public.ensure_xedruo_company_profile(
+create or replace function private.ensure_xedruo_company_profile(
   p_company_slug text,
   p_display_name text default null
 )
@@ -167,10 +172,10 @@ begin
 end;
 $$;
 
-revoke all on function public.ensure_xedruo_identity(text) from public, anon;
-grant execute on function public.ensure_xedruo_identity(text) to authenticated;
-revoke all on function public.ensure_xedruo_company_profile(text, text) from public, anon;
-grant execute on function public.ensure_xedruo_company_profile(text, text) to authenticated;
+revoke all on function private.ensure_xedruo_identity(text) from public, anon;
+grant execute on function private.ensure_xedruo_identity(text) to authenticated;
+revoke all on function private.ensure_xedruo_company_profile(text, text) from public, anon;
+grant execute on function private.ensure_xedruo_company_profile(text, text) to authenticated;
 
 comment on table public.xedruo_identity is
   'Permanent central identity registry. KYC state does not expire or delete the identity.';
@@ -206,7 +211,7 @@ for each row execute function public.prevent_xedruo_identity_reassignment();
 -- Phone number is collected and stored at registration, but SMS OTP is
 -- intentionally deferred. A phone number is not marked verified until a
 -- future OTP challenge succeeds.
-create or replace function public.set_xedruo_identity_phone(
+create or replace function private.set_xedruo_identity_phone(
   p_country_code text,
   p_phone_e164 text
 )
@@ -252,5 +257,42 @@ begin
 end;
 $$;
 
+revoke all on function private.set_xedruo_identity_phone(text, text) from public, anon;
+grant execute on function private.set_xedruo_identity_phone(text, text) to authenticated;
+
+
+-- PostgREST-facing RPCs are SECURITY INVOKER only. They delegate to private,
+-- auth.uid()-guarded SECURITY DEFINER implementations.
+create or replace function public.ensure_xedruo_identity(p_country_code text)
+returns table(xedruo_id text, country_code char(2), status text, kyc_status text, created boolean)
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $$ select * from private.ensure_xedruo_identity(p_country_code); $$;
+
+create or replace function public.ensure_xedruo_company_profile(
+  p_company_slug text,
+  p_display_name text default null
+)
+returns public.xedruo_company_profiles
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $$ select private.ensure_xedruo_company_profile(p_company_slug, p_display_name); $$;
+
+create or replace function public.set_xedruo_identity_phone(
+  p_country_code text,
+  p_phone_e164 text
+)
+returns table(xedruo_id text, country_code char(2), phone_e164 text, phone_verified_at timestamptz)
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $$ select * from private.set_xedruo_identity_phone(p_country_code, p_phone_e164); $$;
+
+revoke all on function public.ensure_xedruo_identity(text) from public, anon;
+grant execute on function public.ensure_xedruo_identity(text) to authenticated;
+revoke all on function public.ensure_xedruo_company_profile(text, text) from public, anon;
+grant execute on function public.ensure_xedruo_company_profile(text, text) to authenticated;
 revoke all on function public.set_xedruo_identity_phone(text, text) from public, anon;
 grant execute on function public.set_xedruo_identity_phone(text, text) to authenticated;
