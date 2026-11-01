@@ -374,3 +374,151 @@ drop trigger if exists xedruo_identity_created_outbox on public.xedruo_identity;
 create trigger xedruo_identity_created_outbox
 after insert on public.xedruo_identity
 for each row execute function private.enqueue_xedruo_identity_created();
+
+
+-- Browser push subscription storage. Subscription endpoints and encryption keys
+-- are private delivery credentials: clients can only register/remove their own.
+create table if not exists public.xedruo_push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  company_slug text not null references public.xedruo_company_app_registry(company_slug) on update cascade on delete restrict,
+  endpoint text not null unique check (endpoint ~ '^https://'),
+  p256dh text not null check (length(p256dh) between 40 and 256),
+  auth_secret text not null check (length(auth_secret) between 16 and 128),
+  expiration_time timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, company_slug, endpoint)
+);
+
+create index if not exists xedruo_push_subscriptions_user_company_idx
+  on public.xedruo_push_subscriptions(user_id, company_slug);
+
+alter table public.xedruo_push_subscriptions enable row level security;
+revoke all on public.xedruo_push_subscriptions from public, anon, authenticated;
+grant all on public.xedruo_push_subscriptions to service_role;
+
+create or replace function private.register_xedruo_push_subscription(
+  p_company_slug text,
+  p_endpoint text,
+  p_p256dh text,
+  p_auth_secret text,
+  p_expiration_epoch_ms bigint default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_slug text := lower(trim(p_company_slug));
+  v_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+  if v_slug !~ '^[a-z0-9][a-z0-9-]{1,62}$' then
+    raise exception 'Invalid company application' using errcode = '22023';
+  end if;
+  if not exists (
+    select 1 from public.xedruo_company_app_registry
+    where company_slug = v_slug and enabled = true
+  ) then
+    raise exception 'Company application is not registered or enabled' using errcode = '22023';
+  end if;
+  if p_endpoint is null or p_endpoint !~ '^https://' or length(p_endpoint) > 2048 then
+    raise exception 'Invalid Web Push endpoint' using errcode = '22023';
+  end if;
+  if p_p256dh is null or p_p256dh !~ '^[A-Za-z0-9_-]{40,256}$'
+     or p_auth_secret is null or p_auth_secret !~ '^[A-Za-z0-9_-]{16,128}$' then
+    raise exception 'Invalid Web Push subscription keys' using errcode = '22023';
+  end if;
+  if p_expiration_epoch_ms is not null and
+     (p_expiration_epoch_ms < 0 or p_expiration_epoch_ms > 4102444800000) then
+    raise exception 'Invalid subscription expiration' using errcode = '22023';
+  end if;
+
+  insert into public.xedruo_push_subscriptions(
+    user_id, company_slug, endpoint, p256dh, auth_secret, expiration_time
+  )
+  values (
+    v_user_id, v_slug, p_endpoint, p_p256dh, p_auth_secret,
+    case when p_expiration_epoch_ms is null then null
+         else to_timestamp(p_expiration_epoch_ms / 1000.0) end
+  )
+  on conflict (endpoint) do update
+    set p256dh = excluded.p256dh,
+        auth_secret = excluded.auth_secret,
+        expiration_time = excluded.expiration_time,
+        updated_at = now()
+    where public.xedruo_push_subscriptions.user_id = v_user_id
+      and public.xedruo_push_subscriptions.company_slug = v_slug
+  returning id into v_id;
+
+  if v_id is null then
+    raise exception 'This push endpoint is already registered to another account or company';
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function private.remove_xedruo_push_subscription(
+  p_company_slug text,
+  p_endpoint text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_deleted integer;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+  delete from public.xedruo_push_subscriptions
+  where user_id = v_user_id
+    and company_slug = lower(trim(p_company_slug))
+    and endpoint = p_endpoint;
+  get diagnostics v_deleted = row_count;
+  return v_deleted > 0;
+end;
+$$;
+
+revoke all on function private.register_xedruo_push_subscription(text, text, text, text, bigint) from public, anon;
+grant execute on function private.register_xedruo_push_subscription(text, text, text, text, bigint) to authenticated;
+revoke all on function private.remove_xedruo_push_subscription(text, text) from public, anon;
+grant execute on function private.remove_xedruo_push_subscription(text, text) to authenticated;
+
+create or replace function public.register_xedruo_push_subscription(
+  p_company_slug text,
+  p_endpoint text,
+  p_p256dh text,
+  p_auth_secret text,
+  p_expiration_epoch_ms bigint default null
+)
+returns uuid
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $$ select private.register_xedruo_push_subscription(
+  p_company_slug, p_endpoint, p_p256dh, p_auth_secret, p_expiration_epoch_ms
+); $$;
+
+create or replace function public.remove_xedruo_push_subscription(
+  p_company_slug text,
+  p_endpoint text
+)
+returns boolean
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $$ select private.remove_xedruo_push_subscription(p_company_slug, p_endpoint); $$;
+
+revoke all on function public.register_xedruo_push_subscription(text, text, text, text, bigint) from public, anon;
+grant execute on function public.register_xedruo_push_subscription(text, text, text, text, bigint) to authenticated;
+revoke all on function public.remove_xedruo_push_subscription(text, text) from public, anon;
+grant execute on function public.remove_xedruo_push_subscription(text, text) to authenticated;
