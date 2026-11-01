@@ -34,6 +34,15 @@ VAPID is Web Push authentication, not an SMS gateway and not a way to deliver an
 
 Each company app must register its own service-worker push subscription against the central notification API, tagged with its verified company slug and environment. The API must authenticate the registering company, encrypt subscription secrets at rest, support subscription rotation/revocation, and fan out events from a durable outbox with retry/dead-letter handling. A company must not be able to register endpoints for another company.
 
+## Push subscription API implementation
+
+The central migration now defines:
+- `public.register_xedruo_push_subscription`: authenticated users register a browser subscription for an enabled company slug. The endpoint and Web Push key material are stored in a table with RLS enabled and direct client table access revoked.
+- `public.remove_xedruo_push_subscription`: users can remove only their own endpoint for the specified company.
+- Subscription rows are company-scoped and carry an active flag for delivery cleanup. The existing service worker displays notification payloads; company-specific apps should pass their own registered slug to the subscription helper.
+
+The existing push Edge Functions predate this schema and still use direct table writes. They must be reconciled with these RPCs before this migration is applied and before push registration is switched on in production. The migration does not itself send notifications.
+
 ## Required deployment configuration
 
 Before enabling production registration, configure and verify:
