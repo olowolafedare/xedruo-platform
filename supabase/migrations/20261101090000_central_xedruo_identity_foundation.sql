@@ -176,3 +176,28 @@ comment on table public.xedruo_identity is
   'Permanent central identity registry. KYC state does not expire or delete the identity.';
 comment on table public.xedruo_company_profiles is
   'Independent profile per Xedruo company, linked to the permanent central Xedruo ID.';
+
+-- Enforce the permanence rule even for privileged maintenance paths:
+-- identity number and original issuing country cannot be changed or deleted.
+create or replace function public.prevent_xedruo_identity_reassignment()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'A permanent Xedruo identity cannot be deleted or reassigned';
+  end if;
+  if new.xedruo_id is distinct from old.xedruo_id
+     or new.country_code is distinct from old.country_code
+     or new.user_id is distinct from old.user_id then
+    raise exception 'A permanent Xedruo identity number and issuing country cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists xedruo_identity_permanent_guard on public.xedruo_identity;
+create trigger xedruo_identity_permanent_guard
+before update or delete on public.xedruo_identity
+for each row execute function public.prevent_xedruo_identity_reassignment();
