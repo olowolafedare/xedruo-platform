@@ -381,13 +381,17 @@ for each row execute function private.enqueue_xedruo_identity_created();
 create table if not exists public.xedruo_push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  company_slug text not null references public.xedruo_company_app_registry(company_slug) on update cascade on delete restrict,
+  company_slug text not null default 'xedruo'
+    references public.xedruo_company_app_registry(company_slug) on update cascade on delete restrict,
   endpoint text not null unique check (endpoint ~ '^https://'),
   p256dh text not null check (length(p256dh) between 40 and 256),
-  auth_secret text not null check (length(auth_secret) between 16 and 128),
+  auth text not null check (length(auth) between 16 and 128),
+  user_agent text,
+  active boolean not null default true,
   expiration_time timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique(user_id, endpoint),
   unique(user_id, company_slug, endpoint)
 );
 
@@ -440,16 +444,17 @@ begin
   end if;
 
   insert into public.xedruo_push_subscriptions(
-    user_id, company_slug, endpoint, p256dh, auth_secret, expiration_time
+    user_id, company_slug, endpoint, p256dh, auth, active, expiration_time
   )
   values (
-    v_user_id, v_slug, p_endpoint, p_p256dh, p_auth_secret,
+    v_user_id, v_slug, p_endpoint, p_p256dh, p_auth_secret, true,
     case when p_expiration_epoch_ms is null then null
          else to_timestamp(p_expiration_epoch_ms / 1000.0) end
   )
   on conflict (endpoint) do update
     set p256dh = excluded.p256dh,
-        auth_secret = excluded.auth_secret,
+        auth = excluded.auth,
+        active = true,
         expiration_time = excluded.expiration_time,
         updated_at = now()
     where public.xedruo_push_subscriptions.user_id = v_user_id
