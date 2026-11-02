@@ -26,7 +26,7 @@ function handoffToCompany(session, company, destination) {
   let origin = null;
   let route = '/';
   if (key === 'sportruo' || path.includes('sportruo')) { origin = 'https://sportruo.vercel.app'; route = '/'; }
-  else if (['pay-and-play', 'pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = path.includes('/pay') ? '/pay' : '/play'; }
+  else if (['pay-and-play', 'pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = key === 'pay-bank' || /\/pay(?:\/|$)/.test(path) ? '/pay' : '/play'; }
   else if (key === 'spacetruo' || path.includes('spacetruo')) { origin = 'https://spacetruo-standalone.vercel.app'; route = '/dashboard'; }
   else if (key === 'healthruo' || path.includes('healthruo')) { origin = 'https://healthruo-standalone.vercel.app'; route = '/dashboard'; }
   else if (['properties', 'xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
