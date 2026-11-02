@@ -177,6 +177,7 @@ export default function IdentityOnboarding() {
   if (step === 'complete' && identity) {
     return (
       <AuthLayout icon={ShieldCheck} title="Your Xedruo account is ready" subtitle="Your central Xedruo identity can be used across the connected company applications.">
+        {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
         <div className="rounded-2xl border bg-muted/30 p-5 space-y-4">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-6 h-6 text-primary" />
