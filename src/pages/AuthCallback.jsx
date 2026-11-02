@@ -2,9 +2,89 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/xedruoClient';
 import { saveCustomerContact } from '@/lib/xedruoIdentity';
-const SPORTRUO_URL='https://sportruo.vercel.app/';
-const PAY_AND_PLAY_URL='https://xedruo-pay-and-play.vercel.app/';
-const AUTH_RETURN_KEY='xedruo_oauth_return_to';
-const safeReturnPath=(value)=>typeof value==='string'&&value.startsWith('/')&&!value.startsWith('//')?value:'/';
-async function completeOAuthSession(){const url=new URL(window.location.href);const existing=await supabase.auth.getSession();if(existing.data?.session?.user)return existing.data.session;const code=url.searchParams.get('code');const oauthError=url.searchParams.get('error_description')||url.searchParams.get('error');if(oauthError)throw new Error(decodeURIComponent(oauthError.replace(/\+/g,' ')));if(!code)throw new Error('Google did not return an authorization code.');const{data,error}=await supabase.auth.exchangeCodeForSession(code);if(error)throw error;if(!data?.session?.user)throw new Error('Google sign-in completed without an active session.');return data.session;}
-export default function AuthCallback(){const navigate=useNavigate();const[error,setError]=useState('');useEffect(()=>{let active=true;const finish=async()=>{try{const session=await completeOAuthSession();const pending=localStorage.getItem('xedruo_pending_contact');if(pending){try{const contact=JSON.parse(pending);await saveCustomerContact(contact);}finally{localStorage.removeItem('xedruo_pending_contact');}}const url=new URL(window.location.href);const company=url.searchParams.get('company')||localStorage.getItem('xedruo_oauth_company');const destination=safeReturnPath(localStorage.getItem(AUTH_RETURN_KEY));localStorage.removeItem(AUTH_RETURN_KEY);localStorage.removeItem('xedruo_oauth_company');if(company==='pay-and-play'){const hash=new URLSearchParams({access_token:session.access_token,refresh_token:session.refresh_token||'',token_type:'bearer',expires_in:String(Math.max(1,Math.floor((session.expires_at||0)*1000-Date.now())/1000))});window.location.replace(`${PAY_AND_PLAY_URL}#${hash.toString()}`);return;}if(company==='sportruo'){const hash=new URLSearchParams({access_token:session.access_token,refresh_token:session.refresh_token||'',token_type:'bearer',expires_in:String(Math.max(1,Math.floor((session.expires_at||0)*1000-Date.now())/1000))});window.location.replace(`${SPORTRUO_URL}#${hash.toString()}`);return;}if(active)navigate(destination,{replace:true});}catch(err){if(!active)return;const message=String(err?.message||'Google sign-in could not be completed.');if(/code verifier|pkce/i.test(message)){localStorage.removeItem(AUTH_RETURN_KEY);localStorage.removeItem('xedruo_oauth_company');setError('This sign-in session expired or was opened in another browser. Please start Google sign-in again.');}else setError(message);}};finish();return()=>{active=false;};},[navigate]);if(error)return <main className="min-h-screen flex items-center justify-center px-6"><div className="max-w-md text-center"><h1 className="text-xl font-semibold">Sign-in could not be completed</h1><p className="mt-2 text-sm text-muted-foreground">{error}</p><button className="mt-6 text-sm font-medium underline" onClick={()=>navigate('/login',{replace:true})}>Start sign-in again</button></div></main>;return <div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"/></div>;}
+
+const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
+const safeReturnPath = (value) => typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+
+async function completeOAuthSession() {
+  const url = new URL(window.location.href);
+  const existing = await supabase.auth.getSession();
+  if (existing.data?.session?.user) return existing.data.session;
+  const code = url.searchParams.get('code');
+  const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error');
+  if (oauthError) throw new Error(decodeURIComponent(oauthError.replace(/\+/g, ' ')));
+  if (!code) throw new Error('Google did not return an authorization code.');
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) throw error;
+  if (!data?.session?.user) throw new Error('Google sign-in completed without an active session.');
+  return data.session;
+}
+
+function handoffToCompany(session, company, destination) {
+  const key = String(company || '').trim().toLowerCase();
+  const path = String(destination || '').toLowerCase();
+  let origin = null;
+  let route = '/';
+  if (key === 'sportruo' || path.includes('sportruo')) { origin = 'https://sportruo.vercel.app'; route = '/'; }
+  else if (['pay-and-play', 'pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = path.includes('/pay') ? '/pay' : '/play'; }
+  else if (key === 'spacetruo' || path.includes('spacetruo')) { origin = 'https://spacetruo-standalone.vercel.app'; route = '/dashboard'; }
+  else if (key === 'healthruo' || path.includes('healthruo')) { origin = 'https://healthruo-standalone.vercel.app'; route = '/dashboard'; }
+  else if (['properties', 'xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
+  else if (['music', 'music-distribution', 'xedruo-music'].includes(key) || path.includes('distribution')) { origin = 'https://xedruo-music-distribution.vercel.app'; route = '/distribution'; }
+  else if (['xedrion-ai', 'xedruo-ai'].includes(key) || path.includes('xedrion-ai')) { origin = 'https://xedrion-ai.vercel.app'; route = '/'; }
+  else if (['adom', 'adom-global-commerce'].includes(key) || path.includes('adom')) { origin = 'https://adom-global-commerce.vercel.app'; route = '/'; }
+  else if (['hireuo', 'careers'].includes(key) || path.includes('hireuo')) { origin = 'https://hireuo.xedruo.com'; route = '/auth/bridge?next=%2Fstart'; }
+  if (!origin || !session?.access_token) return false;
+  const expiresIn = session.expires_at ? Math.max(1, Math.floor(session.expires_at - Date.now() / 1000)) : 3600;
+  const hash = new URLSearchParams({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token || '',
+    token_type: 'bearer',
+    expires_in: String(expiresIn),
+  });
+  const target = new URL(route, origin);
+  target.hash = hash.toString();
+  window.location.replace(target.toString());
+  return true;
+}
+
+export default function AuthCallback() {
+  const navigate = useNavigate();
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    const finish = async () => {
+      try {
+        const session = await completeOAuthSession();
+        const pending = localStorage.getItem('xedruo_pending_contact');
+        if (pending) {
+          try {
+            const contact = JSON.parse(pending);
+            await saveCustomerContact(contact);
+          } finally {
+            localStorage.removeItem('xedruo_pending_contact');
+          }
+        }
+        const url = new URL(window.location.href);
+        const company = url.searchParams.get('company') || localStorage.getItem('xedruo_oauth_company');
+        const destination = safeReturnPath(localStorage.getItem(AUTH_RETURN_KEY));
+        localStorage.removeItem(AUTH_RETURN_KEY);
+        localStorage.removeItem('xedruo_oauth_company');
+        if (handoffToCompany(session, company, destination)) return;
+        if (active) navigate(destination, { replace: true });
+      } catch (err) {
+        if (!active) return;
+        const message = String(err?.message || 'Google sign-in could not be completed.');
+        if (/code verifier|pkce/i.test(message)) {
+          localStorage.removeItem(AUTH_RETURN_KEY);
+          localStorage.removeItem('xedruo_oauth_company');
+          setError('This sign-in session expired or was opened in another browser. Please start Google sign-in again.');
+        } else setError(message);
+      }
+    };
+    finish();
+    return () => { active = false; };
+  }, [navigate]);
+  if (error) return <main className="min-h-screen flex items-center justify-center px-6"><div className="max-w-md text-center"><h1 className="text-xl font-semibold">Sign-in could not be completed</h1><p className="mt-2 text-sm text-muted-foreground">{error}</p><button className="mt-6 text-sm font-medium underline" onClick={() => navigate('/login', { replace: true })}>Start sign-in again</button></div></main>;
+  return <div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /></div>;
+}
