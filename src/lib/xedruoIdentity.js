@@ -34,7 +34,7 @@ export async function saveCustomerContact({ countryCode, phoneE164 }) {
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
   const normalizedPhone = String(phoneE164 || '').trim();
   if (!/^[A-Z]{2}$/.test(normalizedCountry)) throw new Error('Select a valid issuing country.');
-  if (!/^\\+[1-9][0-9]{7,14}$/.test(normalizedPhone)) {
+  if (!/^\+[1-9][0-9]{7,14}$/.test(normalizedPhone)) {
     throw new Error('Enter a valid international phone number.');
   }
   await ensureXedruoId({ countryCode: normalizedCountry });
