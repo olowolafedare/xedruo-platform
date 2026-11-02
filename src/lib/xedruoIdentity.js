@@ -14,7 +14,6 @@ export async function getIdentity() {
 }
 
 export async function ensureXedruoId({ countryCode } = {}) {
-  const me = await xedruo.auth.me();
   const existing = await getIdentity();
   if (existing?.xedruo_id) return { ...existing, xedruoId: existing.xedruo_id, created: false };
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
@@ -31,7 +30,7 @@ export async function ensureXedruoId({ countryCode } = {}) {
 }
 
 export async function saveCustomerContact({ countryCode, phoneE164 }) {
-  const me = await xedruo.auth.me();
+  await xedruo.auth.me();
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
   const normalizedPhone = String(phoneE164 || '').trim();
   if (!/^[A-Z]{2}$/.test(normalizedCountry)) throw new Error('Select a valid issuing country.');
