@@ -24,7 +24,7 @@ export default function IdentityGate({ children }) {
           .eq('user_id', user.id)
           .maybeSingle();
         if (error) throw error;
-        if (alive) setNeeds(!data?.country_code || !data?.phone_e164 || !data?.phone_verified_at);
+        if (alive) setNeeds(!data?.country_code || !data?.phone_e164);
       } catch {
         if (alive) setNeeds(true);
       } finally {
