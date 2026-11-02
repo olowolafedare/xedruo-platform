@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Clock3, Loader2, Phone, ShieldCheck, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ const readableError = (err, fallback = 'Something went wrong. Please try again.'
 
 export default function IdentityOnboarding() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [country, setCountry] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
@@ -168,8 +169,12 @@ export default function IdentityOnboarding() {
   };
 
   const continueAfterOnboarding = () => {
+    const saved = localStorage.getItem('xedruo_oauth_return_to');
+    const from = location.state?.from;
+    const safe = (value) => typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : null;
+    const destination = safe(saved) || safe(from) || '/management';
     localStorage.removeItem('xedruo_oauth_return_to');
-    navigate('/dashboard', { replace: true });
+    navigate(destination, { replace: true });
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin" /></div>;
