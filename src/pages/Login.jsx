@@ -11,14 +11,31 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { toast } from '@/components/ui/use-toast';
 
 import { appOrigin } from '@/lib/appOrigin';
-const SPORTRUO_URL = 'https://sportruo.vercel.app/';
-const PAY_AND_PLAY_URL = 'https://xedruo-pay-and-play.vercel.app/';
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const LOGOUT_RETURN_KEY = 'xedruo_logout_return_to';
-const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai']);
-const getSafeReturnPath = (value) => { if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null; const path = value.split('?')[0].split('#')[0]; if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|healthruo|logistics|properties|spacetruo)(\/dashboard)?$/.test(path)) return value; return null; };
+const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportruo','/sportruo','/company/sportruo/dashboard','/company/healthruo','/healthruo','/company/logistics','/logistics','/company/properties','/properties','/company/spacetruo','/spacetruo','/company/xedruo-ai','/xedruo-ai','/company/pay-bank','/pay-and-play','/company/music','/distribution','/hireuo']);
+const getSafeReturnPath = (value) => { if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null; const path = value.split('?')[0].split('#')[0]; if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|healthruo|logistics|properties|spacetruo|pay-bank|music)(\/dashboard)?$/.test(path)) return value; return null; };
 const isSportruoReturn = (value) => { const path = getSafeReturnPath(value); if (!path) return false; const pathname = path.split('?')[0].split('#')[0]; return pathname === '/company/sportruo' || pathname === '/sportruo' || pathname === '/company/sportruo/dashboard'; };
-const handoffToSportruo = (data) => { if (!data?.access_token) return false; const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) }); window.location.replace(`${SPORTRUO_URL}#${hash.toString()}`); return true; };
+function handoffToCompany(data, company, destination) {
+  if (!data?.access_token) return false;
+  const key = String(company || '').trim().toLowerCase();
+  const path = String(destination || '').toLowerCase();
+  let origin = null, route = '/';
+  if (key === 'sportruo' || path.includes('sportruo')) { origin = 'https://sportruo.vercel.app'; route = '/'; }
+  else if (['pay-and-play','pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = path.includes('/pay') ? '/pay' : '/play'; }
+  else if (key === 'spacetruo' || path.includes('spacetruo')) { origin = 'https://spacetruo-standalone.vercel.app'; route = '/dashboard'; }
+  else if (key === 'healthruo' || path.includes('healthruo')) { origin = 'https://healthruo-standalone.vercel.app'; route = '/dashboard'; }
+  else if (['properties','xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
+  else if (['music','music-distribution','xedruo-music'].includes(key) || path.includes('distribution')) { origin = 'https://xedruo-music-distribution.vercel.app'; route = '/distribution'; }
+  else if (['xedrion-ai','xedruo-ai'].includes(key) || path.includes('xedrion-ai')) { origin = 'https://xedrion-ai.vercel.app'; route = '/'; }
+  else if (['adom','adom-global-commerce'].includes(key) || path.includes('adom')) { origin = 'https://adom-global-commerce.vercel.app'; route = '/'; }
+  else if (['hireuo','careers'].includes(key) || path.includes('hireuo')) { origin = 'https://hireuo.xedruo.com'; route = '/auth/bridge?next=%2Fstart'; }
+  if (!origin) return false;
+  const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) });
+  const target = new URL(route, origin); target.hash = hash.toString();
+  window.location.replace(target.toString());
+  return true;
+}
 
 export default function Login() {
   const location = useLocation();
@@ -39,7 +56,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
-    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; if (payAndPlayContext && handoffToPayAndPlay(result)) return; window.location.href = destination; }
+    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (handoffToCompany(result, company, destination)) return; window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid email or password'); }
     finally { setLoading(false); }
   };
@@ -55,19 +72,19 @@ export default function Login() {
   const verifyOtp = async () => {
     if (otpCode.length !== 6) { setError('Enter the 6-digit verification code'); return; }
     setError(''); setLoading(true);
-    try { const result = await xedruo.auth.verifyLoginOtp(email.trim(), otpCode); localStorage.removeItem(LOGOUT_RETURN_KEY); if (sportruoContext && handoffToSportruo(result)) return; if (payAndPlayContext && handoffToPayAndPlay(result)) return; window.location.href = destination; }
+    try { const result = await xedruo.auth.verifyLoginOtp(email.trim(), otpCode); localStorage.removeItem(LOGOUT_RETURN_KEY); if (handoffToCompany(result, company, destination)) return; window.location.href = destination; }
     catch (err) { setError(err.message || 'Invalid or expired verification code'); }
     finally { setLoading(false); }
   };
 
-  const handoffToPayAndPlay = (data) => { if (!data?.access_token) return false; const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) }); window.location.replace(`${PAY_AND_PLAY_URL}#${hash.toString()}`); return true; };
+
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
     try {
       localStorage.setItem(AUTH_RETURN_KEY, destination);
       if (sportruoContext) localStorage.setItem('xedruo_oauth_company', 'sportruo'); else if (company) localStorage.setItem('xedruo_oauth_company', company);
-      const callback = new URL('/auth/callback', appOrigin()); if (sportruoContext) callback.searchParams.set('company', 'sportruo'); else if (payAndPlayContext) callback.searchParams.set('company', 'pay-and-play'); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
+      const callback = new URL('/auth/callback', appOrigin()); if (company) callback.searchParams.set('company', company); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
     } catch (err) { localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false); }
   };
 
