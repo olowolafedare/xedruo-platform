@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 import ScrollToTop from './components/ScrollToTop'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import IdentityGate from '@/components/IdentityGate'
 import Login from './pages/Login'
 import ParentLogin from './pages/ParentLogin'
 import Register from './pages/Register'
@@ -48,7 +49,7 @@ const externalRoutes = [
 ]
 
 const publicPaths = new Set([
-  '/', '/ecosystem', '/management', '/login', '/register',
+  '/', '/ecosystem', '/login', '/register',
   '/auth/callback', '/forgot-password', '/reset-password',
   '/pricing', '/dashboard', ...externalRoutes.map(([path]) => path),
 ])
@@ -88,14 +89,14 @@ function AuthenticatedApp() {
         <Route path="/pricing" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         {externalRoutes.map(([path, url]) => <Route key={path} path={path} element={<ExternalRedirect to={url} />} />)}
-        <Route path="/management" element={<Management />} />
+        <Route path="/management" element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />}><IdentityGate><Management /></IdentityGate></ProtectedRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/onboarding" element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />}><IdentityOnboarding /></ProtectedRoute>} />
-        <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><ParentCompany /></ProtectedRoute>} />
+        <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><IdentityGate><ParentCompany /></IdentityGate></ProtectedRoute>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
