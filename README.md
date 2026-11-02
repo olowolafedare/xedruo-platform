@@ -36,7 +36,7 @@ The holding platform and operating products are deployed independently. The GitH
 | Adom Global Commerce | olowolafedare/adom-global-commerce | adom-global-commerce |
 | Global Logistics | olowolafedare/Xedruo-globa-logistics | xedruo-global-logistics |
 
-The legacy SpaceTruo, Healthruo and Properties Vercel projects are compatibility redirectors only. Their project root directories contain redirect stubs that preserve paths, query strings and fragments while sending visitors to the matching standalone production projects. The platform itself also routes users directly to the standalone projects. Do not use these legacy projects as application build targets or store product code in the holding platform.
+The legacy SpaceTruo, Healthruo and Properties Vercel project records are retired: they have no active product domains or live production deployments. Their root directories retain redirect stubs for any future compatibility deployment, but the standalone projects are authoritative. Do not use the legacy records as application build targets or store product code in the holding platform.
 
 ## Release workflow
 
