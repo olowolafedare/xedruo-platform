@@ -1,6 +1,5 @@
-// The Xedruo customer ecosystem: 13 standalone companies.
-// #01 Xedruo Pay/Bank contains banking and payment services.
-// #13 Music Distribution is the existing application — never rebuilt or merged.
+// The Xedruo customer ecosystem directory. Standalone products are linked to their own production projects.
+// Xedruo Pay/Bank contains banking and payment services.
 export const companies = [
   {
     num: "01",
@@ -101,16 +100,6 @@ export const companies = [
     color: "#f43f5e",
     route: "/company/properties",
     desc: "Browse property listings, contact agents and save favorites.",
-  },
-  {
-    num: "11",
-    slug: "spacetruo",
-    name: "Spacetruo",
-    tagline: "Offices & event spaces",
-    icon: "🏢",
-    color: "#8b5cf6",
-    route: "/company/spacetruo",
-    desc: "Book offices, event and meeting spaces by availability.",
   },
 ];
 
