@@ -22,7 +22,7 @@ function handoffToCompany(data, company, destination) {
   const path = String(destination || '').toLowerCase();
   let origin = null, route = '/';
   if (key === 'sportruo' || path.includes('sportruo')) { origin = 'https://sportruo.vercel.app'; route = '/'; }
-  else if (['pay-and-play','pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = path.includes('/pay') ? '/pay' : '/play'; }
+  else if (['pay-and-play','pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = key === 'pay-bank' || /\/pay(?:\/|$)/.test(path) ? '/pay' : '/play'; }
   else if (key === 'spacetruo' || path.includes('spacetruo')) { origin = 'https://spacetruo-standalone.vercel.app'; route = '/dashboard'; }
   else if (key === 'healthruo' || path.includes('healthruo')) { origin = 'https://healthruo-standalone.vercel.app'; route = '/dashboard'; }
   else if (['properties','xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
@@ -52,7 +52,7 @@ export default function Login() {
   const [mode, setMode] = useState('password');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const destination = sportruoContext ? SPORTRUO_URL : payAndPlayContext ? PAY_AND_PLAY_URL : requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
+  const destination = requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
