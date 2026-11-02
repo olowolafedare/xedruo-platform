@@ -6,17 +6,24 @@ import { appUrl as productionUrl } from '@/lib/appOrigin';
 const STAFF_ROLES = ['governor','ceo','cfo','developer','customer_service','operations'];
 const getIdentityRecords = async (user) => {
   if (!user) return null;
-  const [profileResult, accountResult, rolesResult] = await Promise.all([
-    supabase.from('profiles').select('full_name,avatar_url,bio').eq('id', user.id).maybeSingle(),
+  const [profileResult, accountResult, accountRolesResult] = await Promise.all([
+    supabase.from('xedruo_profiles').select('full_name,avatar_url,bio').eq('id', user.id).maybeSingle(),
     supabase.from('xedruo_accounts').select('status').eq('id', user.id).single(),
-    supabase.from('xedruo_user_roles').select('role').eq('user_id', user.id),
+    supabase.from('xedruo_account_roles').select('role_id').eq('account_id', user.id),
   ]);
-  const error = profileResult.error || accountResult.error || rolesResult.error;
+  const error = profileResult.error || accountResult.error || accountRolesResult.error;
   if (error) throw error;
+  const roleIds = (accountRolesResult.data || []).map(({ role_id }) => role_id).filter(Boolean);
+  let roles = [];
+  if (roleIds.length) {
+    const { data: roleRows, error: roleError } = await supabase.from('xedruo_roles').select('name').in('id', roleIds);
+    if (roleError) throw roleError;
+    roles = (roleRows || []).map(({ name }) => name).filter(Boolean);
+  }
   return {
     profile: profileResult.data,
     status: accountResult.data.status,
-    roles: rolesResult.data.map(({ role }) => role),
+    roles,
   };
 };
 const auth = {
@@ -35,7 +42,7 @@ const auth = {
   async resetPasswordRequest(email) { const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:productionUrl('/reset-password')}); if(error) throw new Error(error.message); return true; },
   async resetPassword({newPassword}) { const {data,error}=await supabase.auth.updateUser({password:newPassword}); if(error) throw new Error(error.message); return data; },
   setToken() {},
-  async updateMe(patch={}) { const { data: current, error: authError } = await supabase.auth.getUser(); if (authError || !current?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profilePatch = patch || {}; const allowedFields = new Set(['full_name', 'avatar_url', 'bio']); const unsupportedFields = Object.keys(profilePatch).filter((field) => !allowedFields.has(field)); if (unsupportedFields.length) throw new Error(`Unsupported profile fields: ${unsupportedFields.join(', ')}`); if (!Object.keys(profilePatch).length) return current.user; const { data: profile, error } = await supabase.from('profiles').update(profilePatch).eq('id', current.user.id).select('full_name,avatar_url,bio').single(); if (error) throw error; return { ...current.user, ...profile }; },
+  async updateMe(patch={}) { const { data: current, error: authError } = await supabase.auth.getUser(); if (authError || !current?.user) throw Object.assign(new Error('Not authenticated'), { status: 401 }); const profilePatch = patch || {}; const allowedFields = new Set(['full_name', 'avatar_url', 'bio']); const unsupportedFields = Object.keys(profilePatch).filter((field) => !allowedFields.has(field)); if (unsupportedFields.length) throw new Error(`Unsupported profile fields: ${unsupportedFields.join(', ')}`); if (!Object.keys(profilePatch).length) return current.user; const { data: profile, error } = await supabase.from('xedruo_profiles').update(profilePatch).eq('id', current.user.id).select('full_name,avatar_url,bio').single(); if (error) throw error; return { ...current.user, ...profile }; },
   async logout() { const returnTo=`${window.location.pathname}${window.location.search}${window.location.hash}`; if(returnTo.startsWith('/')&&returnTo!=='/login') localStorage.setItem('xedruo_logout_return_to',returnTo); await supabase.auth.signOut(); window.location.assign(productionUrl('/login')); },
   redirectToLogin() { const returnTo=`${window.location.pathname}${window.location.search}${window.location.hash}`; const target=returnTo.startsWith('/')&&returnTo!=='/login'?`/login?returnTo=${encodeURIComponent(returnTo)}`:'/login'; window.location.assign(productionUrl(target)); },
   async loginWithProvider(provider, options={}) { const callbackUrl=options.redirectTo || productionUrl('/auth/callback'); const {data,error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:callbackUrl}}); if(error) throw new Error(error.message); if(data?.url&&window.location.href!==data.url) window.location.assign(data.url); return data; },
