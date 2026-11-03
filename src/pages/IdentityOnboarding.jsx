@@ -98,18 +98,7 @@ export default function IdentityOnboarding() {
     return { current, fullPhone };
   };
 
-  const savePhoneAndContinue = async () => {
-    setError('');
-    setSending(true);
-    try {
-      await saveIdentity();
-      setStep('complete');
-    } catch (err) {
-      setError(readableError(err, 'Could not save your Xedruo identity.'));
-    } finally {
-      setSending(false);
-    }
-  };
+
 
   const sendPhoneCode = async () => {
     setError('');
@@ -192,11 +181,11 @@ export default function IdentityOnboarding() {
 
   if (step === 'otp') {
     return (
-      <AuthLayout icon={Phone} title="Verify your phone number" subtitle={`We sent a 6-digit verification code to your Xedruo device for ${phone}`}>
+      <AuthLayout icon={Phone} title="Verify your phone number" subtitle={`We sent a 6-digit SMS verification code to ${phone}`}>
         {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-        <div className="rounded-xl border bg-muted/30 p-4 mb-6 flex items-start gap-3">
-          <BellRing className="w-5 h-5 mt-0.5 shrink-0 text-primary" />
-          <div className="text-sm"><p className="font-semibold">Check your Xedruo notification</p><p className="text-muted-foreground mt-1">Enter the 6-digit code sent to this device. It expires in 10 minutes.</p></div>
+        <div className="rounded-xl border bg-muted/30 p-4 mb-6 text-sm">
+          <p className="font-semibold">Check your SMS messages</p>
+          <p className="text-muted-foreground mt-1">Enter the 6-digit code sent to your phone number. It expires according to your authentication provider's OTP policy.</p>
         </div>
         <div className="flex justify-center mb-6">
           <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
@@ -206,7 +195,6 @@ export default function IdentityOnboarding() {
         <Button className="w-full h-12" onClick={verifyPhone} disabled={sending || otp.length !== 6}>
           {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : 'Verify phone number'}
         </Button>
-        <button className="w-full mt-4 text-sm text-primary font-medium" onClick={() => { setError(''); setChallengeId(''); setOtp(''); setStep('complete'); }}>Verify later</button>
       </AuthLayout>
     );
   }
@@ -231,12 +219,9 @@ export default function IdentityOnboarding() {
             <Input id="onboarding-phone" type="tel" autoComplete="tel" placeholder={dialCode ? `${dialCode} 8012345678` : '+2348012345678'} value={phone.startsWith(dialCode) ? phone.slice(dialCode.length) : phone} onChange={(e) => setPhone(`${dialCode}${digitsOnly(e.target.value).replace(/^0/, '')}`)} />
           </div>
         </div>
-        <div className="rounded-lg border p-3 text-sm text-muted-foreground">Your country determines your Xedruo ID prefix and the regional KYC requirements shown later. Phone verification is available now or can be completed later.</div>
-        <Button className="w-full h-12" onClick={savePhoneAndContinue} disabled={sending || !country || !dialCode}>
-          {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save phone & create Xedruo ID'}
-        </Button>
-        <Button variant="outline" className="w-full h-11" onClick={sendPhoneCode} disabled={sending || !country || !dialCode}>
-          {sending ? 'Preparing...' : 'Save phone & verify now'}
+        <div className="rounded-lg border p-3 text-sm text-muted-foreground">Your country determines your Xedruo ID prefix. Verify your phone number to activate your shared Xedruo identity.</div>
+        <Button className="w-full h-12" onClick={sendPhoneCode} disabled={sending || !country || !dialCode || !phone.trim()}>
+          {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending SMS...</> : 'Save phone & verify'}
         </Button>
       </div>
     </AuthLayout>
