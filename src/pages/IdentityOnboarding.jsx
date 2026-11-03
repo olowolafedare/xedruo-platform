@@ -223,7 +223,7 @@ export default function IdentityOnboarding() {
             {filteredCountries.map((c) => <option key={c.code} value={c.code}>{countryFlag(c.code)} {c.name}</option>)}
           </select>
         </div>
-        {dialCode && <div className="text-xs text-muted-foreground">Country calling code: <span className="font-semibold text-foreground">{dialCode}</span></div>}
+        {dialCode && <div className="space-y-2"><Label htmlFor="onboarding-calling-code">Country calling code</Label><Input id="onboarding-calling-code" readOnly value={dialCode} /></div>}
         <div className="space-y-2">
           <Label htmlFor="onboarding-phone">Phone number</Label>
           <div className="flex gap-2">
