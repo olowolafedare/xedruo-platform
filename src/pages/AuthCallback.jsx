@@ -32,7 +32,6 @@ function handoffToCompany(session, company, destination) {
   else if (['properties', 'xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
   else if (['music', 'music-distribution', 'xedruo-music'].includes(key) || path.includes('distribution')) { origin = 'https://xedruo-music-distribution.vercel.app'; route = '/distribution'; }
   else if (['xedrion-ai', 'xedruo-ai'].includes(key) || path.includes('xedrion-ai')) { origin = 'https://xedrion-ai.vercel.app'; route = '/'; }
-  else if (['adom', 'adom-global-commerce'].includes(key) || path.includes('adom')) { origin = 'https://adom-global-commerce.vercel.app'; route = '/'; }
   else if (['hireuo', 'careers'].includes(key) || path.includes('hireuo')) { origin = 'https://hireuo.xedruo.com'; route = '/auth/bridge?next=%2Fstart'; }
   if (!origin || !session?.access_token) return false;
   const expiresIn = session.expires_at ? Math.max(1, Math.floor(session.expires_at - Date.now() / 1000)) : 3600;
