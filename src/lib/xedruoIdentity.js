@@ -15,7 +15,10 @@ export async function getIdentity() {
 
 export async function ensureXedruoId({ countryCode } = {}) {
   const existing = await getIdentity();
-  if (existing?.xedruo_id) return { ...existing, xedruoId: existing.xedruo_id, created: false };
+  if (existing?.xedruo_id) {
+    if (!existing.phone_e164) throw new Error('Add and save your phone number before using your Xedruo ID.');
+    return { ...existing, xedruoId: existing.xedruo_id, created: false };
+  }
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(normalizedCountry)) {
     throw new Error('Select your issuing country before creating your Xedruo ID.');
@@ -37,7 +40,6 @@ export async function saveCustomerContact({ countryCode, phoneE164 }) {
   if (!/^\+[1-9][0-9]{7,14}$/.test(normalizedPhone)) {
     throw new Error('Enter a valid international phone number.');
   }
-  await ensureXedruoId({ countryCode: normalizedCountry });
   const { data, error } = await supabase.rpc('set_xedruo_identity_phone', {
     p_country_code: normalizedCountry,
     p_phone_e164: normalizedPhone,
