@@ -15,7 +15,8 @@ const SAFE_RETURN_PATHS = new Set(['/','/company/adom','/adom','/company/sportru
 const getSafeReturnPath = (value) => { if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null; const path = value.split('?')[0].split('#')[0]; if (SAFE_RETURN_PATHS.has(path) || /^\/company\/(sportruo|healthruo|logistics|properties|spacetruo|pay-bank|music)(\/dashboard)?$/.test(path)) return value; return null; };
 const isSportruoReturn = (value) => { const path = getSafeReturnPath(value); if (!path) return false; const pathname = path.split('?')[0].split('#')[0]; return pathname === '/company/sportruo' || pathname === '/sportruo' || pathname === '/company/sportruo/dashboard'; };
 function handoffToCompany(data, company, destination) {
-  if (!data?.access_token) return false;
+  const session = data?.session || data;
+  if (!session?.access_token) return false;
   const key = String(company || '').trim().toLowerCase();
   const path = String(destination || '').toLowerCase();
   let origin = null, route = '/';
