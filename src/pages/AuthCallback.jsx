@@ -74,6 +74,18 @@ export default function AuthCallback() {
           localStorage.removeItem('sportruo_registration_role');
         }
         const destination = safeReturnPath(localStorage.getItem(AUTH_RETURN_KEY));
+        const { data: identity, error: identityError } = await supabase
+          .from('xedruo_identity')
+          .select('xedruo_id,phone_e164,phone_verified_at')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (identityError) throw identityError;
+        if (!identity?.xedruo_id || !identity.phone_e164 || !identity.phone_verified_at) {
+          localStorage.setItem(AUTH_RETURN_KEY, destination);
+          if (company) localStorage.setItem('xedruo_oauth_company', company);
+          if (active) navigate('/identity', { replace: true, state: { from: destination } });
+          return;
+        }
         localStorage.removeItem(AUTH_RETURN_KEY);
         localStorage.removeItem('xedruo_oauth_company');
         if (handoffToCompany(session, company, destination)) return;
