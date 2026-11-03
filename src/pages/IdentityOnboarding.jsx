@@ -123,8 +123,8 @@ export default function IdentityOnboarding() {
     const company = String(localStorage.getItem('xedruo_oauth_company') || '').trim().toLowerCase();
     const routes = {
       sportruo: ['https://sportruo.vercel.app', '/'],
-      'pay-and-play': ['https://xedruo-pay-and-play.vercel.app', destination.includes('/pay') ? '/pay' : '/play'],
-      'pay-bank': ['https://xedruo-pay-and-play.vercel.app', destination.includes('/pay') ? '/pay' : '/play'],
+      'pay-and-play': ['https://xedruo-pay-and-play.vercel.app', '/play'],
+      'pay-bank': ['https://xedruo-pay-and-play.vercel.app', '/pay'],
       spacetruo: ['https://spacetruo-standalone.vercel.app', '/dashboard'],
       healthruo: ['https://healthruo-standalone.vercel.app', '/dashboard'],
       properties: ['https://xedruo-properties-standalone.vercel.app', '/properties/workspace'],
