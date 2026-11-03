@@ -139,12 +139,42 @@ export default function IdentityOnboarding() {
     }
   };
 
-  const continueAfterOnboarding = () => {
+  const continueAfterOnboarding = async () => {
     const saved = localStorage.getItem('xedruo_oauth_return_to');
     const from = location.state?.from;
     const safe = (value) => typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : null;
     const destination = safe(saved) || safe(from) || '/management';
+    const company = String(localStorage.getItem('xedruo_oauth_company') || '').trim().toLowerCase();
+    const routes = {
+      sportruo: ['https://sportruo.vercel.app', '/'],
+      'pay-and-play': ['https://xedruo-pay-and-play.vercel.app', destination.includes('/pay') ? '/pay' : '/play'],
+      'pay-bank': ['https://xedruo-pay-and-play.vercel.app', destination.includes('/pay') ? '/pay' : '/play'],
+      spacetruo: ['https://spacetruo-standalone.vercel.app', '/dashboard'],
+      healthruo: ['https://healthruo-standalone.vercel.app', '/dashboard'],
+      properties: ['https://xedruo-properties-standalone.vercel.app', '/properties/workspace'],
+      'xedruo-properties': ['https://xedruo-properties-standalone.vercel.app', '/properties/workspace'],
+      music: ['https://xedruo-music-distribution.vercel.app', '/distribution'],
+      'music-distribution': ['https://xedruo-music-distribution.vercel.app', '/distribution'],
+      'xedruo-music': ['https://xedruo-music-distribution.vercel.app', '/distribution'],
+      'xedrion-ai': ['https://xedrion-ai.vercel.app', '/'],
+      'xedruo-ai': ['https://xedrion-ai.vercel.app', '/'],
+      hireuo: ['https://hireuo.xedruo.com', '/auth/bridge?next=%2Fstart'],
+      careers: ['https://hireuo.xedruo.com', '/auth/bridge?next=%2Fstart'],
+    };
+    const route = routes[company];
+    const { data: { session } } = await supabase.auth.getSession();
+    if (route && session?.access_token) {
+      const expiresIn = session.expires_at ? Math.max(1, Math.floor(session.expires_at - Date.now() / 1000)) : 3600;
+      const hash = new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token || '', token_type: 'bearer', expires_in: String(expiresIn) });
+      const target = new URL(route[1], route[0]);
+      target.hash = hash.toString();
+      localStorage.removeItem('xedruo_oauth_return_to');
+      localStorage.removeItem('xedruo_oauth_company');
+      window.location.replace(target.toString());
+      return;
+    }
     localStorage.removeItem('xedruo_oauth_return_to');
+    localStorage.removeItem('xedruo_oauth_company');
     navigate(destination, { replace: true });
   };
 
