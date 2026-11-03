@@ -45,9 +45,11 @@ export default function IdentityOnboarding() {
         if (!alive) return;
         if (current?.country_code) setCountry(current.country_code.trim());
         if (current?.phone_e164) setPhone(current.phone_e164);
-        if (current?.phone_e164) {
+        if (current?.phone_e164 && current?.phone_verified_at) {
           setIdentity(current);
           setStep('complete');
+        } else {
+          setStep('contact');
         }
       } catch (err) {
         if (alive) setError(readableError(err, 'Could not load onboarding.'));
