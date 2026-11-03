@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { LogIn, Mail, Loader2, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { LogIn, KeyRound, Phone } from 'lucide-react';
 import AuthLayout from '@/components/AuthLayout';
 import GoogleIcon from '@/components/GoogleIcon';
-import { toast } from '@/components/ui/use-toast';
+
 
 import { appOrigin } from '@/lib/appOrigin';
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
@@ -38,71 +38,16 @@ function handoffToCompany(data, company, destination) {
 }
 
 export default function Login() {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const company = params.get('company');
-  const requestedReturnTo = getSafeReturnPath(params.get('returnTo'));
-  const savedReturnTo = getSafeReturnPath(localStorage.getItem(LOGOUT_RETURN_KEY));
-  const sportruoContext = company === 'sportruo' || isSportruoReturn(requestedReturnTo) || isSportruoReturn(savedReturnTo);
-  const payAndPlayContext = company === 'pay-and-play';
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [mode, setMode] = useState('password');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const destination = requestedReturnTo || savedReturnTo || (company ? `/company/${encodeURIComponent(company)}/dashboard` : '/');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setError(''); setLoading(true);
-    try { const result = await xedruo.auth.loginViaEmailPassword(email, password); localStorage.removeItem(LOGOUT_RETURN_KEY); if (handoffToCompany(result, company, destination)) return; window.location.href = destination; }
-    catch (err) { setError(err.message || 'Invalid email or password'); }
-    finally { setLoading(false); }
-  };
-
-  const sendOtp = async () => {
-    if (!email.trim()) { setError('Enter your email address first'); return; }
-    setError(''); setLoading(true);
-    try { await xedruo.auth.sendLoginOtp(email.trim()); setMode('otp'); toast({ title: 'Verification code sent', description: `Check ${email.trim()} for your Xedruo code.` }); }
-    catch (err) { setError(err.message || 'Could not send verification code'); }
-    finally { setLoading(false); }
-  };
-
-  const verifyOtp = async () => {
-    if (otpCode.length !== 6) { setError('Enter the 6-digit verification code'); return; }
-    setError(''); setLoading(true);
-    try { const result = await xedruo.auth.verifyLoginOtp(email.trim(), otpCode); localStorage.removeItem(LOGOUT_RETURN_KEY); if (handoffToCompany(result, company, destination)) return; window.location.href = destination; }
-    catch (err) { setError(err.message || 'Invalid or expired verification code'); }
-    finally { setLoading(false); }
-  };
-
-
-
-  const handleGoogle = async () => {
-    setError(''); setLoading(true);
-    try {
-      localStorage.setItem(AUTH_RETURN_KEY, destination);
-      if (sportruoContext) localStorage.setItem('xedruo_oauth_company', 'sportruo'); else if (company) localStorage.setItem('xedruo_oauth_company', company);
-      const callback = new URL('/auth/callback', appOrigin()); if (company) callback.searchParams.set('company', company); await xedruo.auth.loginWithProvider('google', { redirectTo: callback.toString() });
-    } catch (err) { localStorage.removeItem(AUTH_RETURN_KEY); localStorage.removeItem('xedruo_oauth_company'); setError(err.message || 'Google sign-in failed'); setLoading(false); }
-  };
-
-  if (mode === 'otp') return <AuthLayout icon={KeyRound} title="Verify your email" subtitle={`We sent a 6-digit code to ${email}`} footer={<button onClick={() => { setMode('password'); setOtpCode(''); setError(''); }} className="text-primary font-medium hover:underline">Use another sign-in method</button>}>
-    {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <div className="flex justify-center mb-6"><InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus autoComplete="one-time-code"><InputOTPGroup>{[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup></InputOTP></div>
-    <Button className="w-full h-12 font-medium" onClick={verifyOtp} disabled={loading || otpCode.length !== 6}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : 'Verify & continue'}</Button>
-    <button onClick={sendOtp} disabled={loading} className="w-full mt-4 text-sm text-primary font-medium hover:underline">Resend code</button>
-  </AuthLayout>;
-
-  return <AuthLayout icon={LogIn} title="Welcome back" subtitle="Log in to your account" footer={<>{"Don't have an account? "}<Link to={`/register${sportruoContext ? '?company=sportruo' : company ? `?company=${encodeURIComponent(company)}` : ''}`} className="text-primary font-medium hover:underline">Create one</Link></>}>
-    <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle} disabled={loading}><GoogleIcon className="w-5 h-5 mr-2" /> Continue with Google</Button>
-    <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">OR</span></div></div>
-    {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2"><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" /><Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="pl-10 h-12" required /></div></div>
-      <div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="password">Password</Label><Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link></div><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" /><Input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10 h-12" required /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">{showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}</button></div></div>
-      <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>{loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Logging in...</> : 'Log in'}</Button>
-    </form>
-  </AuthLayout>;
+ const location=useLocation(),params=new URLSearchParams(location.search),company=params.get('company');
+ const requestedReturnTo=getSafeReturnPath(params.get('returnTo')),savedReturnTo=getSafeReturnPath(localStorage.getItem(LOGOUT_RETURN_KEY));
+ const sportruoContext=company==='sportruo'||isSportruoReturn(requestedReturnTo)||isSportruoReturn(savedReturnTo);
+ const destination=requestedReturnTo||savedReturnTo||(company?`/company/${encodeURIComponent(company)}/dashboard`:'/');
+ const [phone,setPhone]=useState(''),[code,setCode]=useState(''),[otp,setOtp]=useState(''),[mode,setMode]=useState('options'),[error,setError]=useState(''),[loading,setLoading]=useState(false);
+ const handleGoogle=async()=>{setError('');setLoading(true);try{localStorage.setItem(AUTH_RETURN_KEY,destination);if(sportruoContext)localStorage.setItem('xedruo_oauth_company','sportruo');else if(company)localStorage.setItem('xedruo_oauth_company',company);const callback=new URL('/auth/callback',appOrigin());if(company)callback.searchParams.set('company',company);await xedruo.auth.loginWithProvider('google',{redirectTo:callback.toString()});}catch(err){setError(err.message||'Google sign-in failed');setLoading(false);}};
+ const sendCode=async()=>{const value=phone.trim();if(!/^\\+[1-9]\\d{7,14}$/.test(value)){setError('Enter your full phone number with country code, e.g. +2348012345678.');return;}setError('');setLoading(true);try{await xedruo.auth.sendPhoneLoginOtp(value);setMode('otp');}catch(err){setError(err.message||'Could not send phone verification code.');}finally{setLoading(false);}};
+ const verifyCode=async()=>{if(otp.length!==6){setError('Enter the 6-digit code.');return;}setError('');setLoading(true);try{const result=await xedruo.auth.verifyPhoneLoginOtp(phone.trim(),otp);localStorage.removeItem(LOGOUT_RETURN_KEY);if(handoffToCompany(result,company,destination))return;window.location.href=destination;}catch(err){setError(err.message||'Invalid or expired code.');}finally{setLoading(false);}};
+ const footer=<button onClick={()=>{setMode('options');setOtp('');setError('');}} className="text-primary font-medium hover:underline">Back to sign-in options</button>;
+ if(mode==='otp')return <AuthLayout icon={KeyRound} title="Verify your phone" subtitle={`Enter the code sent to ${phone}`} footer={footer}>{error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<div className="flex justify-center mb-6"><InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus autoComplete="one-time-code"><InputOTPGroup>{[0,1,2,3,4,5].map(i=><InputOTPSlot key={i} index={i}/>)}</InputOTPGroup></InputOTP></div><Button className="w-full h-12" onClick={verifyCode} disabled={loading||otp.length!==6}>{loading?'Verifying…':'Verify and continue'}</Button><button onClick={sendCode} className="w-full mt-4 text-sm text-primary" disabled={loading}>Resend code</button></AuthLayout>;
+ if(mode==='phone')return <AuthLayout icon={Phone} title="Continue with phone" subtitle="Use the phone number already linked to your Xedruo account." footer={footer}>{error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<Label htmlFor="xedruo-login-phone">Phone number with country code</Label><Input id="xedruo-login-phone" type="tel" autoComplete="tel" inputMode="tel" placeholder="+2348012345678" value={phone} onChange={e=>setPhone(e.target.value)} className="mt-2 h-12"/><Button className="w-full h-12 mt-5" onClick={sendCode} disabled={loading||!phone.trim()}>{loading?'Sending code…':'Send verification code'}</Button></AuthLayout>;
+ return <AuthLayout icon={LogIn} title="Welcome back" subtitle="Sign in to your Xedruo account" footer={<>{"Don't have an account? "}<Link to={`/register${sportruoContext?'?company=sportruo':company?`?company=${encodeURIComponent(company)}`:''}`} className="text-primary font-medium hover:underline">Create one</Link></>}>{error&&<div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}<Button variant="outline" className="w-full h-12 mb-4" onClick={handleGoogle} disabled={loading}>Continue with Google</Button><Button variant="outline" className="w-full h-12" onClick={()=>setMode('phone')} disabled={loading}>Continue with phone number</Button></AuthLayout>;
 }
