@@ -30,7 +30,7 @@ function handoffToCompany(data, company, destination) {
   else if (['adom','adom-global-commerce'].includes(key) || path.includes('adom')) { origin = 'https://adom-global-commerce.vercel.app'; route = '/'; }
   else if (['hireuo','careers'].includes(key) || path.includes('hireuo')) { origin = 'https://hireuo.xedruo.com'; route = '/auth/bridge?next=%2Fstart'; }
   if (!origin) return false;
-  const hash = new URLSearchParams({ access_token: data.access_token, refresh_token: data.refresh_token || '', token_type: data.token_type || 'bearer', expires_in: String(data.expires_in || 3600) });
+  const hash = new URLSearchParams({ access_token: session.access_token, refresh_token: session.refresh_token || '', token_type: session.token_type || 'bearer', expires_in: String(session.expires_in || 3600) });
   const target = new URL(route, origin); target.hash = hash.toString();
   window.location.replace(target.toString());
   return true;
