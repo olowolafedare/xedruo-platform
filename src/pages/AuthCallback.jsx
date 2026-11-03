@@ -67,6 +67,12 @@ export default function AuthCallback() {
         }
         const url = new URL(window.location.href);
         const company = url.searchParams.get('company') || localStorage.getItem('xedruo_oauth_company');
+        const pendingSportruoRole = localStorage.getItem('sportruo_registration_role');
+        if (company === 'sportruo' && ['fan', 'participant'].includes(pendingSportruoRole)) {
+          const { error: roleError } = await supabase.auth.updateUser({ data: { sportruo_role: pendingSportruoRole } });
+          if (roleError) throw roleError;
+          localStorage.removeItem('sportruo_registration_role');
+        }
         const destination = safeReturnPath(localStorage.getItem(AUTH_RETURN_KEY));
         localStorage.removeItem(AUTH_RETURN_KEY);
         localStorage.removeItem('xedruo_oauth_company');
