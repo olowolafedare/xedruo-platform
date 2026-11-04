@@ -16,7 +16,7 @@ export async function getIdentity() {
 export async function ensureXedruoId({ countryCode } = {}) {
   const existing = await getIdentity();
   if (existing?.xedruo_id) {
-    if (!existing.phone_e164) throw new Error('Add and save your phone number before using your Xedruo ID.');
+    // An existing ID must remain usable while onboarding collects missing contact details.
     return { ...existing, xedruoId: existing.xedruo_id, created: false };
   }
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
