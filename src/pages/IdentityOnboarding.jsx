@@ -8,7 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import AuthLayout from '@/components/AuthLayout';
 import { supabase } from '@/api/xedruoClient';
 import { useAuth } from '@/lib/AuthContext';
-import { getIdentity, saveCustomerContact } from '@/lib/xedruoIdentity';
+import { ensureXedruoId, getIdentity, saveCustomerContact } from '@/lib/xedruoIdentity';
 import { handoffToCompany } from '@/lib/companyHandoff';
 import { COUNTRIES } from '@/data/countries';
 
@@ -92,6 +92,9 @@ export default function IdentityOnboarding() {
       throw new Error(`Enter a valid phone number for ${selected?.name || 'your country'}.`);
     }
     if (!user?.id) throw new Error('Your login session is not ready. Please sign in again.');
+    // Issue the central identity first. The phone RPC intentionally only
+    // updates an identity row and cannot create one for a first-time user.
+    await ensureXedruoId({ countryCode: country });
     await saveCustomerContact({ countryCode: country, phoneE164: fullPhone });
     const current = await getIdentity();
     if (!current?.xedruo_id) throw new Error('Your Xedruo ID could not be loaded. Please try again.');
@@ -198,7 +201,7 @@ export default function IdentityOnboarding() {
             <Input id="onboarding-phone" type="tel" autoComplete="tel" placeholder={dialCode ? `${dialCode} 8012345678` : '+2348012345678'} value={phone.startsWith(dialCode) ? phone.slice(dialCode.length) : phone} onChange={(e) => setPhone(`${dialCode}${digitsOnly(e.target.value).replace(/^0/, '')}`)} />
           </div>
         </div>
-        <div className="rounded-lg border p-3 text-sm text-muted-foreground">Your country determines your Xedruo ID prefix. Verify your phone number to activate your shared Xedruo identity.</div>
+        <div className="rounded-lg border p-3 text-sm text-muted-foreground">Your country determines your Xedruo ID prefix. Save your phone number to complete your shared Xedruo identity. SMS verification is not required.</div>
         <Button className="w-full h-12" onClick={saveAndContinue} disabled={sending || !country || !dialCode || !phone.trim()}>
           {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving your account...</> : 'Save phone & continue'}
         </Button>
