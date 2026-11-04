@@ -33,7 +33,7 @@ export default function Login() {
    const {data:{session}}=await supabase.auth.getSession();
    if(!session?.user||!alive)return;
    const {data:id}=await supabase.from('xedruo_identity').select('xedruo_id,phone_e164,phone_verified_at').eq('user_id',session.user.id).maybeSingle();
-   if(!id?.xedruo_id||!id.phone_e164||!id.phone_verified_at){localStorage.setItem(AUTH_RETURN_KEY,destination);if(company)localStorage.setItem('xedruo_oauth_company',company);navigate('/onboarding',{replace:true,state:{from:destination}});return;}
+   if(!id?.xedruo_id||!id.phone_e164||false){localStorage.setItem(AUTH_RETURN_KEY,destination);if(company)localStorage.setItem('xedruo_oauth_company',company);navigate('/onboarding',{replace:true,state:{from:destination}});return;}
    if(sessionStorage.getItem('xedruo_handoff_attempt'))return; // loop guard: product bounced the user back
    sessionStorage.setItem('xedruo_handoff_attempt','1');
    if(handoffToCompany(session,company,destination))return;
