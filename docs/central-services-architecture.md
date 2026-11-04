@@ -77,14 +77,41 @@ The outline is a target contract, not a claim that every endpoint is already dep
 7. Retire platform customer-login and token-handoff routes only after all company apps are migrated and admin login remains independently available.
 8. Deploy production changes only after build, security, smoke, and end-to-end checks pass.
 
+
+## Verified deployment inventory (4 November 2026)
+
+The following company origins were verified against the team's Vercel project/domain records and recorded in `public.xedruo_company_app_registry.app_origin`. These are the standalone application origins selected for the current migration; callback paths still need per-app code and Supabase Auth allowlist verification.
+
+| Company slug | Vercel project | Git repository | Registered origin |
+|---|---|---|---|
+| adom-global-commerce | adom-global-commerce | olowolafedare/adom-global-commerce | https://adom-global-commerce.vercel.app |
+| healthruo | healthruo-standalone | olowolafedare/Healthruo- | https://healthruo-standalone.vercel.app |
+| hireuo | xedruo-career | olowolafedare/xedruo-careers | https://hireuo.xedruo.com |
+| pay-and-play | xedruo-pay-and-play | olowolafedare/Xedruo-pay-and-play | https://xedruo-pay-and-play.vercel.app |
+| spacetruo | spacetruo-standalone | olowolafedare/Spacetruo- | https://spacetruo-standalone.vercel.app |
+| sportruo | sportruo | olowolafedare/Sportruo | https://sportruo.vercel.app |
+| xedrion-ai | xedrion-ai | olowolafedare/Xedrion-Ai- | https://xedrion-ai.vercel.app |
+| xedruo-global-logistics | xedruo-global-logistics | olowolafedare/Xedruo-globa-logistics | https://xedruo-global-logistics.vercel.app |
+| xedruo-music | xedruo-music-distribution | olowolafedare/Xedruo-Music-Distribution | https://xedruo-music-distribution.vercel.app |
+| xedruo-properties | xedruo-properties-standalone | olowolafedare/Xedruo-properties- | https://xedruo-properties-standalone.vercel.app |
+
+The platform project is linked to `olowolafedare/xedruo-platform` and owns `xedruo.com` / `www.xedruo.com`; its registry row intentionally remains without a customer-app origin because the platform is the admin/control plane, not a customer product login.
+
+### Deployment separation findings
+
+- Vercel still has legacy projects `spacetruo`, `healthruo`, and `xedruo-properties` linked to the central `xedruo-platform` repository.
+- The intended standalone projects `spacetruo-standalone`, `healthruo-standalone`, and `xedruo-properties-standalone` are linked to their corresponding company repositories and have ready production deployments.
+- The legacy projects' latest production deployments were cancelled at the time of inspection; do not use them as the customer app targets.
+- The 10 company origins above have been written to and read back from the Supabase registry. This does not yet configure callback allowlists or enable strict CORS.
+
 ## Known audit blockers
-- Company registry currently has 11 enabled records but every app_origin is null; callback allowlists are not represented in the inspected registry schema.
+- Company registry has 11 enabled records; the 10 product origins are now populated and verified against Vercel domains. The platform/admin row remains null by design. Callback allowlists are not represented in the inspected registry schema.
 - Current xedruo-id-login endpoint has wildcard CORS, accepts no company context, and returns auth tokens without checking a registered calling company.
 - Platform customer login currently includes phone OTP and hardcoded destination routing; it hands tokens to company apps in URL fragments and has a platform fallback.
 - Some inspected company identity gates read identity and country data directly from Supabase instead of using the intended central API.
 - Six tables have RLS enabled but no policies; these require access-model review, not blanket policy creation.
 - Leaked-password protection is disabled in Supabase Auth.
-- Platform and music apps use Vite/React; Xedrion AI uses Next.js. Callback implementations must be framework-specific.
+- Platform and Music use Vite/React; Xedrion AI and Hireuo use Next.js; other company app frameworks require repository-level confirmation. Callback implementations must be framework-specific.
 
 ## Definition of done
 - No customer login journey loads the Xedruo Platform.
