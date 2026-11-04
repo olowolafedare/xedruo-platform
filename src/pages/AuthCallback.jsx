@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/xedruoClient';
 import { saveCustomerContact } from '@/lib/xedruoIdentity';
+import { handoffToCompany } from '@/lib/companyHandoff';
 
 const AUTH_RETURN_KEY = 'xedruo_oauth_return_to';
 const safeReturnPath = (value) => typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/';
@@ -18,33 +19,6 @@ async function completeOAuthSession() {
   if (error) throw error;
   if (!data?.session?.user) throw new Error('Google sign-in completed without an active session.');
   return data.session;
-}
-
-function handoffToCompany(session, company, destination) {
-  const key = String(company || '').trim().toLowerCase();
-  const path = String(destination || '').toLowerCase();
-  let origin = null;
-  let route = '/';
-  if (key === 'sportruo' || path.includes('sportruo')) { origin = 'https://sportruo.vercel.app'; route = '/'; }
-  else if (['pay-and-play', 'pay-bank'].includes(key) || path.includes('pay-and-play')) { origin = 'https://xedruo-pay-and-play.vercel.app'; route = key === 'pay-bank' || /\/pay(?:\/|$)/.test(path) ? '/pay' : '/play'; }
-  else if (key === 'spacetruo' || path.includes('spacetruo')) { origin = 'https://spacetruo-standalone.vercel.app'; route = '/dashboard'; }
-  else if (key === 'healthruo' || path.includes('healthruo')) { origin = 'https://healthruo-standalone.vercel.app'; route = '/dashboard'; }
-  else if (['properties', 'xedruo-properties'].includes(key) || path.includes('properties')) { origin = 'https://xedruo-properties-standalone.vercel.app'; route = path.includes('/list') ? '/properties/list' : '/properties/workspace'; }
-  else if (['music', 'music-distribution', 'xedruo-music'].includes(key) || path.includes('distribution')) { origin = 'https://xedruo-music-distribution.vercel.app'; route = '/distribution'; }
-  else if (['xedrion-ai', 'xedruo-ai'].includes(key) || path.includes('xedrion-ai')) { origin = 'https://xedrion-ai.vercel.app'; route = '/'; }
-  else if (['hireuo', 'careers'].includes(key) || path.includes('hireuo')) { origin = 'https://hireuo.xedruo.com'; route = '/auth/bridge?next=%2Fstart'; }
-  if (!origin || !session?.access_token) return false;
-  const expiresIn = session.expires_at ? Math.max(1, Math.floor(session.expires_at - Date.now() / 1000)) : 3600;
-  const hash = new URLSearchParams({
-    access_token: session.access_token,
-    refresh_token: session.refresh_token || '',
-    token_type: 'bearer',
-    expires_in: String(expiresIn),
-  });
-  const target = new URL(route, origin);
-  target.hash = hash.toString();
-  window.location.replace(target.toString());
-  return true;
 }
 
 export default function AuthCallback() {
@@ -82,11 +56,12 @@ export default function AuthCallback() {
         if (!identity?.xedruo_id || !identity.phone_e164 || !identity.phone_verified_at) {
           localStorage.setItem(AUTH_RETURN_KEY, destination);
           if (company) localStorage.setItem('xedruo_oauth_company', company);
-          if (active) navigate('/identity', { replace: true, state: { from: destination } });
+          if (active) navigate('/onboarding', { replace: true, state: { from: destination } });
           return;
         }
         localStorage.removeItem(AUTH_RETURN_KEY);
         localStorage.removeItem('xedruo_oauth_company');
+        sessionStorage.removeItem('xedruo_handoff_attempt');
         if (handoffToCompany(session, company, destination)) return;
         if (active) navigate(destination, { replace: true });
       } catch (err) {
