@@ -5,16 +5,16 @@
 
 const PRODUCTS = [
   { keys: ['sportruo'], origin: 'https://sportruo.vercel.app', route: '/' },
-  { keys: ['pay-and-play', 'pay-bank'], origin: 'https://xedruo-pay-and-play.vercel.app', route: (k, p) => (k === 'pay-bank' || /\/pay(?:\/|$)/.test(p) ? '/pay' : '/play') },
-  { keys: ['spacetruo'], origin: 'https://spacetruo-standalone.vercel.app', route: '/dashboard' },
-  { keys: ['healthruo'], origin: 'https://healthruo-standalone.vercel.app', route: '/dashboard' },
-  { keys: ['properties', 'xedruo-properties'], origin: 'https://xedruo-properties-standalone.vercel.app', route: (k, p) => (p.includes('/list') ? '/properties/list' : '/properties/workspace') },
-  { keys: ['music', 'music-distribution', 'xedruo-music', 'distribution'], origin: 'https://xedruo-music-distribution.vercel.app', route: '/distribution' },
+  { keys: ['pay-and-play', 'pay-bank'], origin: 'https://xedruo-pay-and-play-xedruo-s-projects.vercel.app', route: (k, p) => (k === 'pay-bank' || /\/pay(?:\/|$)/.test(p) ? '/pay' : '/play') },
+  { keys: ['spacetruo'], origin: 'https://spacetruo-standalone-xedruo-s-projects.vercel.app', route: '/dashboard' },
+  { keys: ['healthruo'], origin: 'https://healthruo-standalone-xedruo-s-projects.vercel.app', route: '/dashboard' },
+  { keys: ['properties', 'xedruo-properties'], origin: 'https://xedruo-properties-standalone-xedruo-s-projects.vercel.app', route: (k, p) => (p.includes('/list') ? '/properties/list' : '/properties/workspace') },
+  { keys: ['music', 'music-distribution', 'xedruo-music', 'distribution'], origin: 'https://xedruo-music-distribution-xedruo-s-projects.vercel.app', route: '/distribution' },
   // Xedrion AI only consumes handed-over tokens at /auth/sso (see xedrion app/auth/sso/page.tsx).
-  { keys: ['xedrion-ai', 'xedruo-ai'], origin: 'https://xedrion-ai.vercel.app', route: '/auth/sso' },
-  { keys: ['hireuo', 'careers'], origin: 'https://hireuo.xedruo.com', route: '/auth/bridge?next=%2Fstart' },
-  { keys: ['adom', 'adom-global-commerce'], origin: 'https://adom-global-commerce.vercel.app', route: '/' },
-  { keys: ['logistics', 'xedruo-global-logistics'], origin: 'https://xedruo-global-logistics.vercel.app', route: '/' },
+  { keys: ['xedrion-ai', 'xedruo-ai'], origin: 'https://xedrion-ai-xedruo-s-projects.vercel.app', route: '/auth/sso' },
+  { keys: ['hireuo', 'careers'], origin: 'https://xedruo-career-xedruo-s-projects.vercel.app', route: '/auth/bridge?next=%2Fstart' },
+  { keys: ['adom', 'adom-global-commerce'], origin: 'https://adom-global-commerce-xedruo-s-projects.vercel.app', route: '/' },
+  { keys: ['logistics', 'xedruo-global-logistics'], origin: 'https://xedruo-global-logistics-xedruo-s-projects.vercel.app', route: '/' },
 ];
 
 const norm = (v) => String(v || '').trim().toLowerCase();
