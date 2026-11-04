@@ -53,7 +53,7 @@ export default function AuthCallback() {
           .eq('user_id', session.user.id)
           .maybeSingle();
         if (identityError) throw identityError;
-        if (!identity?.xedruo_id || !identity.phone_e164 || !identity.phone_verified_at) {
+        if (!identity?.xedruo_id || !identity.phone_e164) {
           localStorage.setItem(AUTH_RETURN_KEY, destination);
           if (company) localStorage.setItem('xedruo_oauth_company', company);
           if (active) navigate('/onboarding', { replace: true, state: { from: destination } });
