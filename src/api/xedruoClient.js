@@ -59,6 +59,7 @@ async function coreApi(path, options = {}) {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'X-Xedruo-Company': 'xedruo',
       ...(options.headers || {}),
     },
   });
