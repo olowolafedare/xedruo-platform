@@ -11,7 +11,7 @@ const PRODUCTS = [
   { keys: ['properties', 'xedruo-properties'], origin: 'https://xedruo-properties-standalone.vercel.app', route: (k, p) => (p.includes('/list') ? '/properties/list' : '/properties/workspace') },
   { keys: ['music', 'music-distribution', 'xedruo-music', 'distribution'], origin: 'https://xedruo-music-distribution.vercel.app', route: '/distribution' },
   // Xedrion AI only consumes handed-over tokens at /auth/sso (see xedrion app/auth/sso/page.tsx).
-  { keys: ['xedrion-ai', 'xedruo-ai'], origin: 'https://xedrion-ai-xedruo-s-projects.vercel.app', route: '/' },
+  { keys: ['xedrion-ai', 'xedruo-ai'], origin: 'https://xedrion-ai.vercel.app', route: '/auth/sso' },
   { keys: ['hireuo', 'careers'], origin: 'https://hireuo.xedruo.com', route: '/auth/bridge?next=%2Fstart' },
   { keys: ['adom', 'adom-global-commerce'], origin: 'https://adom-global-commerce.vercel.app', route: '/' },
   { keys: ['logistics', 'xedruo-global-logistics'], origin: 'https://xedruo-global-logistics.vercel.app', route: '/' },
