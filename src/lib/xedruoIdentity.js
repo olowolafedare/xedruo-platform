@@ -40,7 +40,7 @@ export async function saveCustomerContact({ countryCode, phoneE164, legalName, c
   if (!/^\+[1-9][0-9]{7,14}$/.test(normalizedPhone)) {
     throw new Error('Enter a valid international phone number.');
   }
-  const normalizedLegalName = String(legalName || '').trim().replace(/\\s+/g, ' ');
+  const normalizedLegalName = String(legalName || '').trim().replace(/\s+/g, ' ');
   if (normalizedLegalName.length < 2 || normalizedLegalName.length > 160) {
     throw new Error('Enter your full legal name (2–160 characters).');
   }
