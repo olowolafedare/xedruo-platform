@@ -49,11 +49,11 @@ export default function AuthCallback() {
         const destination = safeReturnPath(localStorage.getItem(AUTH_RETURN_KEY));
         const { data: identity, error: identityError } = await supabase
           .from('xedruo_identity')
-          .select('xedruo_id,phone_e164,phone_verified_at')
+          .select('xedruo_id,phone_e164,phone_verified_at,legal_name')
           .eq('user_id', session.user.id)
           .maybeSingle();
         if (identityError) throw identityError;
-        if (!identity?.xedruo_id || !identity.phone_e164) {
+        if (!identity?.xedruo_id || !identity.phone_e164 || !identity.legal_name?.trim()) {
           localStorage.setItem(AUTH_RETURN_KEY, destination);
           if (company) localStorage.setItem('xedruo_oauth_company', company);
           if (active) navigate('/onboarding', { replace: true, state: { from: destination } });
