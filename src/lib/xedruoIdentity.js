@@ -32,7 +32,7 @@ export async function ensureXedruoId({ countryCode } = {}) {
   return { ...identity, xedruoId: identity.xedruo_id, created: Boolean(identity.created) };
 }
 
-export async function saveCustomerContact({ countryCode, phoneE164 }) {
+export async function saveCustomerContact({ countryCode, phoneE164, legalName, companySlug }) {
   await xedruo.auth.me();
   const normalizedCountry = String(countryCode || '').trim().toUpperCase();
   const normalizedPhone = String(phoneE164 || '').trim();
@@ -40,9 +40,16 @@ export async function saveCustomerContact({ countryCode, phoneE164 }) {
   if (!/^\+[1-9][0-9]{7,14}$/.test(normalizedPhone)) {
     throw new Error('Enter a valid international phone number.');
   }
-  const { data, error } = await supabase.rpc('set_xedruo_identity_phone', {
+  const normalizedLegalName = String(legalName || '').trim().replace(/\\s+/g, ' ');
+  if (normalizedLegalName.length < 2 || normalizedLegalName.length > 160) {
+    throw new Error('Enter your full legal name (2–160 characters).');
+  }
+  const canonicalSlug = canonicalCompanySlug(companySlug || 'xedruo');
+  const { data, error } = await supabase.rpc('complete_xedruo_identity_onboarding', {
     p_country_code: normalizedCountry,
     p_phone_e164: normalizedPhone,
+    p_legal_name: normalizedLegalName,
+    p_company_slug: canonicalSlug,
   });
   if (error) throw error;
   return firstRow(data) || getIdentity();
