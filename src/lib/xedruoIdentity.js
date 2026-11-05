@@ -6,7 +6,7 @@ export async function getIdentity() {
   const me = await xedruo.auth.me();
   const { data, error } = await supabase
     .from('xedruo_identity')
-    .select('xedruo_id,country_code,status,kyc_status,kyc_level,phone_e164,phone_verified_at,verified_at')
+    .select('xedruo_id,country_code,legal_name,status,kyc_status,kyc_level,phone_e164,phone_verified_at,verified_at')
     .eq('user_id', me.id)
     .maybeSingle();
   if (error) throw error;
