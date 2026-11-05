@@ -29,6 +29,7 @@ export default function IdentityOnboarding() {
   const [country, setCountry] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
   const [phone, setPhone] = useState('');
+  const [legalName, setLegalName] = useState('');
   const [otp, setOtp] = useState('');
   const [challengeId, setChallengeId] = useState('');
   const [step, setStep] = useState('contact');
@@ -45,6 +46,7 @@ export default function IdentityOnboarding() {
         const current = await getIdentity();
         if (!alive) return;
         if (current?.country_code) setCountry(current.country_code.trim());
+        if (current?.legal_name) setLegalName(current.legal_name);
         if (current?.phone_e164) setPhone(current.phone_e164);
         if (current?.phone_e164 && current?.xedruo_id && /^[A-Z]{2}-[0-9]{10}$/.test(current.xedruo_id)) {
           setIdentity(current);
@@ -85,6 +87,8 @@ export default function IdentityOnboarding() {
 
   const saveIdentity = async () => {
     if (!country) throw new Error('Select your country.');
+    const normalizedLegalName = legalName.trim().replace(/\\s+/g, ' ');
+    if (normalizedLegalName.length < 2 || normalizedLegalName.length > 160) throw new Error('Enter your full legal name (2–160 characters).');
     const value = normalizePhone(phone);
     const local = value.startsWith(dialCode) ? digitsOnly(value.slice(dialCode.length)) : digitsOnly(value).replace(/^0/, '');
     const fullPhone = dialCode + local;
@@ -95,7 +99,8 @@ export default function IdentityOnboarding() {
     // Issue the central identity first. The phone RPC intentionally only
     // updates an identity row and cannot create one for a first-time user.
     await ensureXedruoId({ countryCode: country });
-    await saveCustomerContact({ countryCode: country, phoneE164: fullPhone });
+    const companySlug = localStorage.getItem('xedruo_oauth_company') || 'xedruo';
+    await saveCustomerContact({ countryCode: country, phoneE164: fullPhone, legalName: normalizedLegalName, companySlug });
     const current = await getIdentity();
     if (!current?.xedruo_id) throw new Error('Your Xedruo ID could not be loaded. Please try again.');
     setPhone(fullPhone);
@@ -186,6 +191,10 @@ export default function IdentityOnboarding() {
       {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
       <div className="space-y-4">
         <div className="space-y-2">
+          <Label htmlFor="onboarding-legal-name">Full legal name</Label>
+          <Input id="onboarding-legal-name" autoComplete="name" placeholder="Enter your full legal name" value={legalName} onChange={(e) => setLegalName(e.target.value)} required maxLength={160} />
+        </div>
+        <div className="space-y-2">
           <Label>Country</Label>
           <Input placeholder="Search country..." value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)} />
           <select aria-label="Select country" className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm" value={country} onChange={(e) => setCountry(e.target.value)}>
@@ -202,7 +211,7 @@ export default function IdentityOnboarding() {
           </div>
         </div>
         <div className="rounded-lg border p-3 text-sm text-muted-foreground">Your country determines your Xedruo ID prefix. Save your phone number to complete your shared Xedruo identity. SMS verification is not required.</div>
-        <Button className="w-full h-12" onClick={saveAndContinue} disabled={sending || !country || !dialCode || !phone.trim()}>
+        <Button className="w-full h-12" onClick={saveAndContinue} disabled={sending || !legalName.trim() || !country || !dialCode || !phone.trim()}>
           {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving your account...</> : 'Save phone & continue'}
         </Button>
       </div>
