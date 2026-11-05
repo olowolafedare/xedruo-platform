@@ -48,7 +48,7 @@ export default function IdentityOnboarding() {
         if (current?.country_code) setCountry(current.country_code.trim());
         if (current?.legal_name) setLegalName(current.legal_name);
         if (current?.phone_e164) setPhone(current.phone_e164);
-        if (current?.phone_e164 && current?.xedruo_id && /^[A-Z]{2}-[0-9]{10}$/.test(current.xedruo_id)) {
+        if (current?.phone_e164 && current?.legal_name && current?.xedruo_id && /^[A-Z]{2}-[0-9]{10}$/.test(current.xedruo_id)) {
           setIdentity(current);
           setStep('complete');
         } else {
