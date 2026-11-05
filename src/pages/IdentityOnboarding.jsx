@@ -87,7 +87,7 @@ export default function IdentityOnboarding() {
 
   const saveIdentity = async () => {
     if (!country) throw new Error('Select your country.');
-    const normalizedLegalName = legalName.trim().replace(/\\s+/g, ' ');
+    const normalizedLegalName = legalName.trim().replace(/\s+/g, ' ');
     if (normalizedLegalName.length < 2 || normalizedLegalName.length > 160) throw new Error('Enter your full legal name (2–160 characters).');
     const value = normalizePhone(phone);
     const local = value.startsWith(dialCode) ? digitsOnly(value.slice(dialCode.length)) : digitsOnly(value).replace(/^0/, '');
