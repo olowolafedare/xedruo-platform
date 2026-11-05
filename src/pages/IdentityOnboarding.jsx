@@ -48,6 +48,17 @@ export default function IdentityOnboarding() {
         if (current?.country_code) setCountry(current.country_code.trim());
         if (current?.legal_name) setLegalName(current.legal_name);
         if (current?.phone_e164) setPhone(current.phone_e164);
+        const pending = localStorage.getItem('xedruo_pending_contact');
+        if (pending) {
+          try {
+            const contact = JSON.parse(pending);
+            if (!current?.country_code && contact?.countryCode) setCountry(String(contact.countryCode).toUpperCase());
+            if (!current?.phone_e164 && contact?.phoneE164) setPhone(String(contact.phoneE164));
+            if (!current?.legal_name && contact?.legalName) setLegalName(String(contact.legalName));
+          } catch {
+            localStorage.removeItem('xedruo_pending_contact');
+          }
+        }
         if (current?.phone_e164 && current?.legal_name && current?.xedruo_id && /^[A-Z]{2}-[0-9]{10}$/.test(current.xedruo_id)) {
           setIdentity(current);
           setStep('complete');
@@ -101,6 +112,7 @@ export default function IdentityOnboarding() {
     await ensureXedruoId({ countryCode: country });
     const companySlug = localStorage.getItem('xedruo_oauth_company') || 'xedruo';
     await saveCustomerContact({ countryCode: country, phoneE164: fullPhone, legalName: normalizedLegalName, companySlug });
+    localStorage.removeItem('xedruo_pending_contact');
     const current = await getIdentity();
     if (!current?.xedruo_id) throw new Error('Your Xedruo ID could not be loaded. Please try again.');
     setPhone(fullPhone);
