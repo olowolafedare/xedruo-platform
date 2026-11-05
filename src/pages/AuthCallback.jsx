@@ -31,10 +31,9 @@ export default function AuthCallback() {
         const session = await completeOAuthSession();
         const pending = localStorage.getItem('xedruo_pending_contact');
         if (pending) {
-          try {
-            const contact = JSON.parse(pending);
+          const contact = JSON.parse(pending);
+          if (contact?.legalName?.trim()) {
             await saveCustomerContact(contact);
-          } finally {
             localStorage.removeItem('xedruo_pending_contact');
           }
         }
