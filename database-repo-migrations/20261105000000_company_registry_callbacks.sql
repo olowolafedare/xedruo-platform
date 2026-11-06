@@ -14,7 +14,6 @@ alter table public.xedruo_company_app_registry
 create or replace function public.xedruo_urls_on_origin(p_origin text, p_urls text[])
 returns boolean
 language sql
-
 immutable
 as $$
   select case

@@ -90,12 +90,13 @@ export function createXedruoAuth({
   };
 
   // --- sign-in methods (all complete on this product's origin) ---
-  async function signInWithGoogle({ returnTo } = {}) {
+  async function signInWithGoogle({ returnTo, queryParams } = {}) {
     rememberReturnTo(returnTo);
     // redirectTo carries no query string: it must match the registered callback exactly.
+    // queryParams are passed to Google (e.g. { prompt: 'select_account' }), not to the callback.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: callbackUrl() },
+      options: { redirectTo: callbackUrl(), queryParams },
     });
     if (error) throw new XedruoAuthError('oauth_start_failed', 'Could not start Google sign-in.', 400);
   }
