@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -24,39 +25,45 @@ import { handoffToCompany } from '@/lib/companyHandoff';
 import { COUNTRIES } from '@/data/countries';
 
 const DIAL_CODES = {
-  AF:'+93',AL:'+355',DZ:'+213',AD:'+376',AO:'+244',AG:'+1',
-  AR:'+54',AM:'+374',AU:'+61',AT:'+43',AZ:'+994',BS:'+1',
-  BH:'+973',BD:'+880',BB:'+1',BY:'+375',BE:'+32',BZ:'+501',
-  BJ:'+229',BT:'+975',BO:'+591',BA:'+387',BW:'+267',BR:'+55',
-  BN:'+673',BG:'+359',BF:'+226',BI:'+257',CV:'+238',KH:'+855',
-  CM:'+237',CA:'+1',CF:'+236',TD:'+235',CL:'+56',CN:'+86',
-  CO:'+57',KM:'+269',CG:'+242',CD:'+243',CR:'+506',CI:'+225',
-  HR:'+385',CU:'+53',CY:'+357',CZ:'+420',DK:'+45',DJ:'+253',
-  DM:'+1',DO:'+1',EC:'+593',EG:'+20',SV:'+503',GQ:'+240',
-  ER:'+291',EE:'+372',SZ:'+268',ET:'+251',FJ:'+679',FI:'+358',
-  FR:'+33',GA:'+241',GM:'+220',GE:'+995',DE:'+49',GH:'+233',
-  GR:'+30',GD:'+1',GT:'+502',GN:'+224',GW:'+245',GY:'+592',
-  HT:'+509',HN:'+504',HU:'+36',IS:'+354',IN:'+91',ID:'+62',
-  IR:'+98',IQ:'+964',IE:'+353',IL:'+972',IT:'+39',JM:'+1',
-  JP:'+81',JO:'+962',KZ:'+7',KE:'+254',KI:'+686',KP:'+850',
-  KR:'+82',KW:'+965',KG:'+996',LA:'+856',LV:'+371',LB:'+961',
-  LS:'+266',LR:'+231',LY:'+218',LI:'+423',LT:'+370',LU:'+352',
-  MG:'+261',MW:'+265',MY:'+60',MV:'+960',ML:'+223',MT:'+356',
-  MH:'+692',MR:'+222',MU:'+230',MX:'+52',FM:'+691',MD:'+373',
-  MC:'+377',MN:'+976',ME:'+382',MA:'+212',MZ:'+258',MM:'+95',
-  NA:'+264',NR:'+674',NP:'+977',NL:'+31',NZ:'+64',NI:'+505',
-  NE:'+227',NG:'+234',MK:'+389',NO:'+47',OM:'+968',PK:'+92',
-  PW:'+680',PS:'+970',PA:'+507',PG:'+675',PY:'+595',PE:'+51',
-  PH:'+63',PL:'+48',PT:'+351',QA:'+974',RO:'+40',RU:'+7',
-  RW:'+250',KN:'+1',LC:'+1',VC:'+1',WS:'+685',SM:'+378',
-  ST:'+239',SA:'+966',SN:'+221',RS:'+381',SC:'+248',SL:'+232',
-  SG:'+65',SK:'+421',SI:'+386',SB:'+677',SO:'+252',ZA:'+27',
-  SS:'+211',ES:'+34',LK:'+94',SD:'+249',SR:'+597',SE:'+46',
-  CH:'+41',SY:'+963',TJ:'+992',TZ:'+255',TH:'+66',TL:'+670',
-  TG:'+228',TO:'+676',TT:'+1',TN:'+216',TR:'+90',TM:'+993',
-  TV:'+688',UG:'+256',UA:'+380',AE:'+971',GB:'+44',US:'+1',
-  UY:'+598',UZ:'+998',VU:'+678',VA:'+39',VE:'+58',VN:'+84',
-  YE:'+967',ZM:'+260',ZW:'+263',
+  AF: '+93', AL: '+355', DZ: '+213', AD: '+376', AO: '+244', AG: '+1',
+  AR: '+54', AM: '+374', AU: '+61', AT: '+43', AZ: '+994', BS: '+1',
+  BH: '+973', BD: '+880', BB: '+1', BY: '+375', BE: '+32', BZ: '+501',
+  BJ: '+229', BT: '+975', BO: '+591', BA: '+387', BW: '+267', BR: '+55',
+  BN: '+673', BG: '+359', BF: '+226', BI: '+257', CV: '+238', KH: '+855',
+  CM: '+237', CA: '+1', CF: '+236', TD: '+235', CL: '+56', CN: '+86',
+  CO: '+57', KM: '+269', CG: '+242', CD: '+243', CR: '+506', CI: '+225',
+  HR: '+385', CU: '+53', CY: '+357', CZ: '+420', DK: '+45', DJ: '+253',
+  DM: '+1', DO: '+1', EC: '+593', EG: '+20', SV: '+503', GQ: '+240',
+  ER: '+291', EE: '+372', SZ: '+268', ET: '+251', FJ: '+679', FI: '+358',
+  FR: '+33', GA: '+241', GM: '+220', GE: '+995', DE: '+49', GH: '+233',
+  GR: '+30', GD: '+1', GT: '+502', GN: '+224', GW: '+245', GY: '+592',
+  HT: '+509', HN: '+504', HU: '+36', IS: '+354', IN: '+91', ID: '+62',
+  IR: '+98', IQ: '+964', IE: '+353', IL: '+972', IT: '+39', JM: '+1',
+  JP: '+81', JO: '+962', KZ: '+7', KE: '+254', KI: '+686', KP: '+850',
+  KR: '+82', KW: '+965', KG: '+996', LA: '+856', LV: '+371', LB: '+961',
+  LS: '+266', LR: '+231', LY: '+218', LI: '+423', LT: '+370', LU: '+352',
+  MG: '+261', MW: '+265', MY: '+60', MV: '+960', ML: '+223', MT: '+356',
+  MH: '+692', MR: '+222', MU: '+230', MX: '+52', FM: '+691', MD: '+373',
+  MC: '+377', MN: '+976', ME: '+382', MA: '+212', MZ: '+258', MM: '+95',
+  NA: '+264', NR: '+674', NP: '+977', NL: '+31', NZ: '+64', NI: '+505',
+  NE: '+227', NG: '+234', MK: '+389', NO: '+47', OM: '+968', PK: '+92',
+  PW: '+680', PS: '+970', PA: '+507', PG: '+675', PY: '+595', PE: '+51',
+  PH: '+63', PL: '+48', PT: '+351', QA: '+974', RO: '+40', RU: '+7',
+  RW: '+250', KN: '+1', LC: '+1', VC: '+1', WS: '+685', SM: '+378',
+  ST: '+239', SA: '+966', SN: '+221', RS: '+381', SC: '+248', SL: '+232',
+  SG: '+65', SK: '+421', SI: '+386', SB: '+677', SO: '+252', ZA: '+27',
+  SS: '+211', ES: '+34', LK: '+94', SD: '+249', SR: '+597', SE: '+46',
+  CH: '+41', SY: '+963', TJ: '+992', TZ: '+255', TH: '+66', TL: '+670',
+  TG: '+228', TO: '+676', TT: '+1', TN: '+216', TR: '+90', TM: '+993',
+  TV: '+688', UG: '+256', UA: '+380', AE: '+971', GB: '+44', US: '+1',
+  UY: '+598', UZ: '+998', VU: '+678', VA: '+39', VE: '+58', VN: '+84',
+  YE: '+967', ZM: '+260', ZW: '+263',
+};
+
+const sameTimestamp = (a, b) => {
+  if (!a || !b) return false;
+
+  return new Date(a).getTime() === new Date(b).getTime();
 };
 
 const countryFlag = (code) =>
@@ -64,7 +71,8 @@ const countryFlag = (code) =>
     .map((ch) => String.fromCodePoint(127397 + ch.charCodeAt(0)))
     .join('');
 
-const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const digitsOnly = (value) =>
+  String(value || '').replace(/\D/g, '');
 
 const normalizePhone = (value) =>
   String(value || '').trim().replace(/[^0-9+]/g, '');
@@ -97,10 +105,9 @@ export default function IdentityOnboarding() {
   const [step, setStep] = useState('contact');
 
   const [identity, setIdentity] = useState(null);
-  const [authUser, setAuthUser] = useState(null);
-
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [countryLocked, setCountryLocked] = useState(false);
+  const [suspended, setSuspended] = useState(false);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -143,10 +150,10 @@ export default function IdentityOnboarding() {
     if (authError) throw authError;
 
     if (!data?.user) {
-      throw new Error('Your login session has expired. Please sign in again.');
+      throw new Error(
+        'Your login session has expired. Please sign in again.'
+      );
     }
-
-    setAuthUser(data.user);
 
     return data.user;
   };
@@ -168,6 +175,15 @@ export default function IdentityOnboarding() {
         ]);
 
         if (!alive) return;
+
+        if (current?.status === 'suspended') {
+          setSuspended(true);
+          setIdentity(current);
+          setError(
+            'This Xedruo identity is suspended. Please contact support.'
+          );
+          return;
+        }
 
         setIdentity(current);
 
@@ -195,7 +211,6 @@ export default function IdentityOnboarding() {
 
         const authPhone = currentAuthUser.phone || '';
         const identityPhone = current?.phone_e164 || '';
-
         const initialPhone = authPhone || identityPhone;
 
         if (initialPhone) {
@@ -203,24 +218,26 @@ export default function IdentityOnboarding() {
         }
 
         const verified =
-          Boolean(currentAuthUser.phone_confirmed_at) &&
           Boolean(authPhone) &&
-          authPhone === initialPhone;
+          Boolean(currentAuthUser.phone_confirmed_at) &&
+          authPhone === initialPhone &&
+          identityPhone === authPhone &&
+          sameTimestamp(
+            current?.phone_verified_at,
+            currentAuthUser.phone_confirmed_at
+          );
 
         setPhoneVerified(verified);
 
         const complete =
           Boolean(current?.xedruo_id) &&
+          Boolean(current?.country_code) &&
           Boolean(current?.legal_name) &&
           Boolean(current?.phone_e164) &&
           Boolean(current?.phone_verified_at) &&
           verified;
 
-        if (complete) {
-          setStep('complete');
-        } else {
-          setStep('contact');
-        }
+        setStep(complete ? 'complete' : 'contact');
 
         const pending = localStorage.getItem('xedruo_pending_contact');
 
@@ -285,12 +302,16 @@ export default function IdentityOnboarding() {
   }, [country]);
 
   const validateContact = () => {
-    if (!country) {
-      throw new Error('Select your issuing country.');
+    const normalizedCountry = String(country || '').trim().toUpperCase();
+
+    if (!/^[A-Z]{2}$/.test(normalizedCountry)) {
+      throw new Error('Select a valid issuing country.');
     }
 
     if (!dialCode) {
-      throw new Error('The selected country calling code is unavailable.');
+      throw new Error(
+        'The selected country calling code is unavailable.'
+      );
     }
 
     const normalizedLegalName = legalName.trim().replace(/\s+/g, ' ');
@@ -299,7 +320,9 @@ export default function IdentityOnboarding() {
       normalizedLegalName.length < 3 ||
       normalizedLegalName.length > 160
     ) {
-      throw new Error('Enter your full legal name (3–160 characters).');
+      throw new Error(
+        'Enter your full legal name (3–160 characters).'
+      );
     }
 
     const fullPhone = getFullPhone();
@@ -311,9 +334,76 @@ export default function IdentityOnboarding() {
     }
 
     return {
-      fullPhone,
+      normalizedCountry,
       normalizedLegalName,
+      fullPhone,
     };
+  };
+
+  const completeIdentity = async (verifiedPhone) => {
+    setError('');
+
+    const {
+      normalizedCountry,
+      normalizedLegalName,
+    } = validateContact();
+
+    const currentAuthUser = await loadAuthUser();
+
+    if (
+      currentAuthUser.phone !== verifiedPhone ||
+      !currentAuthUser.phone_confirmed_at
+    ) {
+      throw new Error(
+        'Verify your phone number before completing your Xedruo identity.'
+      );
+    }
+
+    const companySlug =
+      localStorage.getItem('xedruo_oauth_company') || 'xedruo';
+
+    const savedIdentity = await saveCustomerContact({
+      countryCode: normalizedCountry,
+      phoneE164: verifiedPhone,
+      legalName: normalizedLegalName,
+      companySlug,
+    });
+
+    if (savedIdentity?.status === 'suspended') {
+      setSuspended(true);
+
+      throw new Error(
+        'This Xedruo identity is suspended. Please contact support.'
+      );
+    }
+
+    const latestAuthUser = await loadAuthUser();
+
+    if (
+      !savedIdentity?.xedruo_id ||
+      savedIdentity.country_code !== normalizedCountry ||
+      savedIdentity.phone_e164 !== verifiedPhone ||
+      savedIdentity.legal_name !== normalizedLegalName ||
+      !savedIdentity.phone_verified_at ||
+      latestAuthUser.phone !== verifiedPhone ||
+      !sameTimestamp(
+        savedIdentity.phone_verified_at,
+        latestAuthUser.phone_confirmed_at
+      )
+    ) {
+      throw new Error(
+        'Your Xedruo identity could not be confirmed. Please try again.'
+      );
+    }
+
+    localStorage.removeItem('xedruo_pending_contact');
+
+    setIdentity(savedIdentity);
+    setPhone(verifiedPhone);
+    setPhoneVerified(true);
+    setStep('complete');
+
+    return savedIdentity;
   };
 
   const sendPhoneVerification = async () => {
@@ -322,24 +412,20 @@ export default function IdentityOnboarding() {
 
     try {
       const { fullPhone } = validateContact();
-
       const currentAuthUser = await loadAuthUser();
 
       if (!currentAuthUser?.id) {
         throw new Error('Authentication required.');
       }
 
-   
       if (
         currentAuthUser.phone === fullPhone &&
         currentAuthUser.phone_confirmed_at
       ) {
-        setPhoneVerified(true);
         await completeIdentity(fullPhone);
         return;
       }
 
-   
       const { error: updateError } = await supabase.auth.updateUser({
         phone: fullPhone,
       });
@@ -347,11 +433,15 @@ export default function IdentityOnboarding() {
       if (updateError) throw updateError;
 
       setPhone(fullPhone);
+      setPhoneVerified(false);
       setOtp('');
       setStep('otp');
     } catch (err) {
       setError(
-        readableError(err, 'Could not send the phone verification code.')
+        readableError(
+          err,
+          'Could not send the phone verification code.'
+        )
       );
     } finally {
       setSending(false);
@@ -364,7 +454,9 @@ export default function IdentityOnboarding() {
 
     try {
       if (!/^\d{6}$/.test(otp)) {
-        throw new Error('Enter the complete 6-digit verification code.');
+        throw new Error(
+          'Enter the complete 6-digit verification code.'
+        );
       }
 
       const fullPhone = getFullPhone();
@@ -388,64 +480,17 @@ export default function IdentityOnboarding() {
         );
       }
 
-      setPhoneVerified(true);
-
       await completeIdentity(fullPhone);
     } catch (err) {
       setError(
-        readableError(err, 'Phone verification failed. Check the code and try again.')
+        readableError(
+          err,
+          'Phone verification failed. Check the code and try again.'
+        )
       );
     } finally {
       setSending(false);
     }
-  };
-
-  const completeIdentity = async (verifiedPhone) => {
-    setError('');
-
-    const { normalizedLegalName } = validateContact();
-
-    const currentAuthUser = await loadAuthUser();
-
-    if (
-      currentAuthUser.phone !== verifiedPhone ||
-      !currentAuthUser.phone_confirmed_at
-    ) {
-      throw new Error(
-        'Verify your phone number before completing your Xedruo identity.'
-      );
-    }
-
-    const companySlug =
-      localStorage.getItem('xedruo_oauth_company') || 'xedruo';
-
-    const result = await saveCustomerContact({
-      countryCode: country,
-      phoneE164: verifiedPhone,
-      legalName: normalizedLegalName,
-      companySlug,
-    });
-
-    const current = await getIdentity();
-
-    if (
-      !current?.xedruo_id ||
-      !current?.phone_verified_at ||
-      !current?.legal_name
-    ) {
-      throw new Error(
-        'Your Xedruo identity could not be confirmed. Please try again.'
-      );
-    }
-
-    localStorage.removeItem('xedruo_pending_contact');
-
-    setIdentity(current);
-    setPhone(verifiedPhone);
-    setPhoneVerified(true);
-    setStep('complete');
-
-    return result;
   };
 
   const continueAfterOnboarding = async () => {
@@ -484,6 +529,21 @@ export default function IdentityOnboarding() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
+    );
+  }
+
+  if (suspended) {
+    return (
+      <AuthLayout
+        icon={ShieldCheck}
+        title="Identity suspended"
+        subtitle="This Xedruo identity is currently suspended."
+      >
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {error ||
+            'This Xedruo identity is suspended. Please contact support.'}
+        </div>
+      </AuthLayout>
     );
   }
 
@@ -614,7 +674,9 @@ export default function IdentityOnboarding() {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="onboarding-legal-name">Full legal name</Label>
+          <Label htmlFor="onboarding-legal-name">
+            Full legal name
+          </Label>
 
           <Input
             id="onboarding-legal-name"
@@ -655,8 +717,8 @@ export default function IdentityOnboarding() {
 
           {countryLocked && (
             <p className="text-xs text-muted-foreground">
-              Your existing Xedruo identity has an issuing country that cannot
-              be changed.
+              Your existing Xedruo identity has an issuing country that
+              cannot be changed.
             </p>
           )}
         </div>
@@ -676,7 +738,9 @@ export default function IdentityOnboarding() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="onboarding-phone">Phone number</Label>
+          <Label htmlFor="onboarding-phone">
+            Phone number
+          </Label>
 
           <div className="flex gap-2">
             <div className="w-24 shrink-0 flex items-center justify-center rounded-md border bg-muted/40 font-semibold text-sm">
@@ -731,7 +795,9 @@ export default function IdentityOnboarding() {
           {sending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {phoneVerified ? 'Completing identity...' : 'Sending code...'}
+              {phoneVerified
+                ? 'Completing identity...'
+                : 'Sending code...'}
             </>
           ) : phoneVerified ? (
             'Complete Xedruo identity'
