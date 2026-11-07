@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { xedruo, supabase } from '@/api/xedruoClient';
@@ -82,6 +83,25 @@ const isSportruoReturn = (value) => {
   );
 };
 
+const isIdentityComplete = (identity, user) => {
+  if (!identity || !user) return false;
+
+  const authPhoneVerified =
+    Boolean(user.phone) &&
+    Boolean(user.phone_confirmed_at);
+
+  return (
+    Boolean(identity.xedruo_id) &&
+    Boolean(identity.country_code) &&
+    Boolean(identity.legal_name?.trim()) &&
+    Boolean(identity.phone_e164) &&
+    Boolean(identity.phone_verified_at) &&
+    authPhoneVerified &&
+    identity.phone_e164 === user.phone &&
+    identity.phone_verified_at === user.phone_confirmed_at
+  );
+};
+
 export default function Login() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -105,12 +125,13 @@ export default function Login() {
     (company ? `/company/${encodeURIComponent(company)}` : '/');
 
   const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState('options');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(params.get('prompt') !== 'login');
+  const [checking, setChecking] = useState(
+    params.get('prompt') !== 'login'
+  );
 
   const handleGoogle = async () => {
     setError('');
@@ -155,6 +176,7 @@ export default function Login() {
 
     try {
       await xedruo.auth.sendPhoneLoginOtp(value);
+      setOtp('');
       setMode('otp');
     } catch (err) {
       setError(err.message || 'Could not send phone verification code.');
@@ -164,8 +186,15 @@ export default function Login() {
   };
 
   const verifyCode = async () => {
-    if (otp.length !== 6) {
+    if (!/^\d{6}$/.test(otp)) {
       setError('Enter the 6-digit code.');
+      return;
+    }
+
+    const normalizedPhone = phone.trim();
+
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      setError('Enter a valid international phone number.');
       return;
     }
 
@@ -173,16 +202,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await xedruo.auth.verifyPhoneLoginOtp(
-        phone.trim(),
-        otp
-      );
+      await xedruo.auth.verifyPhoneLoginOtp(normalizedPhone, otp);
 
-      if (result?.error) {
-        throw result.error;
-      }
-
-    
       const {
         data: sessionData,
         error: sessionError,
@@ -190,15 +211,56 @@ export default function Login() {
 
       if (sessionError) throw sessionError;
 
-      const session =
-        result?.session ||
-        result?.data?.session ||
-        sessionData?.session;
+      const session = sessionData?.session;
 
       if (!session?.user) {
         throw new Error(
-          'Phone verification succeeded, but no login session was established. Please try signing in again.'
+          'No authenticated session was established. Please try again.'
         );
+      }
+
+      if (
+        session.user.phone !== normalizedPhone ||
+        !session.user.phone_confirmed_at
+      ) {
+        await supabase.auth.signOut();
+
+        throw new Error(
+          'The verified phone number does not match this login.'
+        );
+      }
+
+      const { data: identity, error: identityError } = await supabase
+        .from('xedruo_identity')
+        .select(
+          'xedruo_id,country_code,legal_name,phone_e164,phone_verified_at,status'
+        )
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (identityError) throw identityError;
+
+      if (identity?.status === 'suspended') {
+        await supabase.auth.signOut();
+
+        throw new Error(
+          'This Xedruo identity is suspended. Please contact support.'
+        );
+      }
+
+      if (!isIdentityComplete(identity, session.user)) {
+        localStorage.setItem(AUTH_RETURN_KEY, destination);
+
+        if (company) {
+          localStorage.setItem('xedruo_oauth_company', company);
+        }
+
+        navigate('/onboarding', {
+          replace: true,
+          state: { from: destination },
+        });
+
+        return;
       }
 
       localStorage.removeItem(LOGOUT_RETURN_KEY);
@@ -241,27 +303,28 @@ export default function Login() {
         const { data: identity, error: identityError } = await supabase
           .from('xedruo_identity')
           .select(
-            'xedruo_id,country_code,legal_name,phone_e164,phone_verified_at'
+            'xedruo_id,country_code,legal_name,phone_e164,phone_verified_at,status'
           )
           .eq('user_id', session.user.id)
           .maybeSingle();
 
         if (identityError) throw identityError;
 
-        const authPhoneVerified =
-          Boolean(session.user.phone) &&
-          Boolean(session.user.phone_confirmed_at);
+        if (!alive) return;
 
-        const identityComplete =
-          Boolean(identity?.xedruo_id) &&
-          Boolean(identity?.country_code) &&
-          Boolean(identity?.legal_name?.trim()) &&
-          Boolean(identity?.phone_e164) &&
-          Boolean(identity?.phone_verified_at) &&
-          authPhoneVerified &&
-          identity.phone_e164 === session.user.phone;
+        if (identity?.status === 'suspended') {
+          await supabase.auth.signOut();
 
-        if (!identityComplete) {
+          if (alive) {
+            setError(
+              'This Xedruo identity is suspended. Please contact support.'
+            );
+          }
+
+          return;
+        }
+
+        if (!isIdentityComplete(identity, session.user)) {
           localStorage.setItem(AUTH_RETURN_KEY, destination);
 
           if (company) {
@@ -286,8 +349,12 @@ export default function Login() {
           destination.startsWith('/company/') ? '/' : destination,
           { replace: true }
         );
-      } catch {
-        // If session or identity lookup fails, show the login form---Bright Emmanuel Emeka
+      } catch (err) {
+        if (alive) {
+          setError(
+            err.message || 'Unable to verify your Xedruo account.'
+          );
+        }
       } finally {
         if (alive) setChecking(false);
       }
@@ -310,6 +377,7 @@ export default function Login() {
 
   const footer = (
     <button
+      type="button"
       onClick={() => {
         setMode('options');
         setOtp('');
@@ -360,6 +428,7 @@ export default function Login() {
         </Button>
 
         <button
+          type="button"
           onClick={sendCode}
           className="w-full mt-4 text-sm text-primary"
           disabled={loading}
@@ -452,7 +521,10 @@ export default function Login() {
       <Button
         variant="outline"
         className="w-full h-12"
-        onClick={() => setMode('phone')}
+        onClick={() => {
+          setError('');
+          setMode('phone');
+        }}
         disabled={loading}
       >
         Continue with phone number

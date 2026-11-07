@@ -204,6 +204,7 @@ export default function Register() {
         return;
       }
 
+
       setPendingPhone(number);
       setOtp('');
       setStep('otp');
