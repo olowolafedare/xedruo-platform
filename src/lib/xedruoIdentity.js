@@ -1,5 +1,11 @@
 import { xedruo, supabase } from '@/api/xedruoClient';
 
+const sameTimestamp = (a, b) => {
+  if (!a || !b) return false;
+
+  return new Date(a).getTime() === new Date(b).getTime();
+};
+
 const firstRow = (value) =>
   Array.isArray(value) ? value[0] || null : value || null;
 
@@ -52,7 +58,10 @@ export async function saveCustomerContact({
     throw new Error('Enter your full legal name (3–160 characters).');
   }
 
-  if (me.phone !== normalizedPhone || !me.phone_confirmed_at) {
+  if (
+    me.phone !== normalizedPhone ||
+    !me.phone_confirmed_at
+  ) {
     throw new Error(
       'Verify this phone number before completing Xedruo identity onboarding.'
     );
@@ -60,7 +69,7 @@ export async function saveCustomerContact({
 
   const canonicalSlug = canonicalCompanySlug(companySlug || 'xedruo');
 
-  const { data, error } = await supabase.rpc(
+  const { error } = await supabase.rpc(
     'complete_xedruo_identity_onboarding',
     {
       p_country_code: normalizedCountry,
@@ -72,9 +81,33 @@ export async function saveCustomerContact({
 
   if (error) throw error;
 
-  return firstRow(data) || (await getIdentity());
-}
+  // Read the persisted identity rather than trusting the RPC response.
+  const identity = await getIdentity();
 
+  if (
+    !identity?.xedruo_id ||
+    identity.country_code !== normalizedCountry ||
+    identity.phone_e164 !== normalizedPhone ||
+    identity.legal_name !== normalizedLegalName ||
+    !identity.phone_verified_at ||
+    !sameTimestamp(
+      identity.phone_verified_at,
+      me.phone_confirmed_at
+    )
+  ) {
+    throw new Error(
+      'Xedruo identity verification could not be confirmed. Please try again.'
+    );
+  }
+
+  if (identity.status === 'suspended') {
+    throw new Error(
+      'This Xedruo identity is suspended. Please contact support.'
+    );
+  }
+
+  return identity;
+}
 export async function promoteXedruoIdToVerified() {
   const identity = await getIdentity();
 
@@ -152,6 +185,31 @@ export async function linkCompany(slug, displayName) {
 
   if (!me?.id) {
     throw new Error('Authentication required.');
+  }
+
+  const identity = await getIdentity();
+
+  if (
+    !identity?.xedruo_id ||
+    !identity.country_code ||
+    !identity.legal_name ||
+    !identity.phone_e164 ||
+    !identity.phone_verified_at ||
+    identity.phone_e164 !== me.phone ||
+    !sameTimestamp(
+      identity.phone_verified_at,
+      me.phone_confirmed_at
+    )
+  ) {
+    throw new Error(
+      'Complete phone verification and Xedruo identity onboarding before linking a company.'
+    );
+  }
+
+  if (identity.status === 'suspended') {
+    throw new Error(
+      'This Xedruo identity is suspended. Company linking is unavailable.'
+    );
   }
 
   const { data, error } = await supabase.rpc(
