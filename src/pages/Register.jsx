@@ -19,7 +19,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp';
 
-import { xedruo } from '@/api/xedruoClient';
+import { xedruo, supabase } from '@/api/xedruoClient';
 import { safeReturnTo } from '@/lib/authReturnTo';
 import { COUNTRIES } from '@/data/countries';
 
@@ -38,35 +38,34 @@ const DIAL_CODES = {
   VN: '+84', KR: '+82', IL: '+972', QA: '+974', KW: '+965',
   BH: '+973', OM: '+968', JO: '+962', LB: '+961', IR: '+98',
   MX: '+52', AR: '+54', CL: '+56', CO: '+57', PE: '+51',
-  VE: '+58', EC: '+593', GH: '+233', UG: '+256', TZ: '+255',
-  RW: '+250', ET: '+251', SN: '+221', CI: '+225', CM: '+237',
-  AO: '+244', ZM: '+260', ZW: '+263', MA: '+212', TN: '+216',
-  DZ: '+213', LY: '+218', SD: '+249', SS: '+211', BW: '+267',
-  NA: '+264', MU: '+230', MG: '+261', GM: '+220', SL: '+232',
-  LR: '+231', BJ: '+229', TG: '+228', NE: '+227', BF: '+226',
-  GA: '+241', CG: '+242', CD: '+243', CF: '+236', TD: '+235',
-  ER: '+291', SO: '+252', DJ: '+253', MW: '+265', LS: '+266',
-  SZ: '+268', KM: '+269', CV: '+238', GW: '+245', GQ: '+240',
-  ST: '+239', MR: '+222', BI: '+257', KM: '+269',
-  AF: '+93', AL: '+355', AD: '+376', AG: '+1', AM: '+374',
-  AT: '+43', AZ: '+994', BS: '+1', BB: '+1', BY: '+375',
-  BZ: '+501', BT: '+975', BO: '+591', BA: '+387', BN: '+673',
-  BG: '+359', KH: '+855', CF: '+236', CR: '+506', HR: '+385',
-  CY: '+357', CZ: '+420', DK: '+45', DM: '+1', DO: '+1',
+  VE: '+58', EC: '+593', UG: '+256', TZ: '+255', RW: '+250',
+  ET: '+251', SN: '+221', CI: '+225', CM: '+237', AO: '+244',
+  ZM: '+260', ZW: '+263', MA: '+212', TN: '+216', DZ: '+213',
+  LY: '+218', SD: '+249', SS: '+211', BW: '+267', NA: '+264',
+  MU: '+230', MG: '+261', GM: '+220', SL: '+232', LR: '+231',
+  BJ: '+229', TG: '+228', NE: '+227', BF: '+226', GA: '+241',
+  CG: '+242', CD: '+243', CF: '+236', TD: '+235', ER: '+291',
+  SO: '+252', DJ: '+253', MW: '+265', LS: '+266', SZ: '+268',
+  KM: '+269', CV: '+238', GW: '+245', GQ: '+240', ST: '+239',
+  MR: '+222', BI: '+257', AF: '+93', AL: '+355', AD: '+376',
+  AG: '+1', AM: '+374', AT: '+43', AZ: '+994', BS: '+1',
+  BB: '+1', BY: '+375', BZ: '+501', BT: '+975', BO: '+591',
+  BA: '+387', BN: '+673', BG: '+359', KH: '+855', CR: '+506',
+  HR: '+385', CY: '+357', CZ: '+420', DM: '+1', DO: '+1',
   SV: '+503', EE: '+372', FJ: '+679', GE: '+995', GR: '+30',
   GD: '+1', GT: '+502', GN: '+224', GY: '+592', HT: '+509',
   HN: '+504', HU: '+36', IS: '+354', IQ: '+964', JM: '+1',
   KZ: '+7', KI: '+686', KP: '+850', KG: '+996', LA: '+856',
-  LV: '+371', LS: '+266', LI: '+423', LT: '+370', LU: '+352',
-  MV: '+960', ML: '+223', MT: '+356', MH: '+692', FM: '+691',
-  MD: '+373', MC: '+377', MN: '+976', ME: '+382', MZ: '+258',
-  MM: '+95', NR: '+674', NP: '+977', NI: '+505', MK: '+389',
-  PW: '+680', PS: '+970', PG: '+675', PY: '+595', RO: '+40',
-  KN: '+1', LC: '+1', VC: '+1', WS: '+685', SM: '+378',
-  SC: '+248', SK: '+421', SI: '+386', SB: '+677', LK: '+94',
-  SR: '+597', SY: '+963', TJ: '+992', TL: '+670', TO: '+676',
-  TT: '+1', TM: '+993', TV: '+688', UY: '+598', UZ: '+998',
-  VU: '+678', VA: '+39', YE: '+967',
+  LV: '+371', LI: '+423', LT: '+370', LU: '+352', MV: '+960',
+  ML: '+223', MT: '+356', MH: '+692', FM: '+691', MD: '+373',
+  MC: '+377', MN: '+976', ME: '+382', MZ: '+258', MM: '+95',
+  NR: '+674', NP: '+977', NI: '+505', MK: '+389', PW: '+680',
+  PS: '+970', PG: '+675', PY: '+595', RO: '+40', KN: '+1',
+  LC: '+1', VC: '+1', WS: '+685', SM: '+378', SC: '+248',
+  SK: '+421', SI: '+386', SB: '+677', LK: '+94', SR: '+597',
+  SY: '+963', TJ: '+992', TL: '+670', TO: '+676', TT: '+1',
+  TM: '+993', TV: '+688', UY: '+598', UZ: '+998', VU: '+678',
+  VA: '+39', YE: '+967',
 };
 
 const digitsOnly = (value) =>
@@ -114,6 +113,7 @@ export default function Register() {
   const [country, setCountry] = useState('NG');
   const [countrySearch, setCountrySearch] = useState('');
   const [phone, setPhone] = useState('');
+  const [pendingPhone, setPendingPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -138,7 +138,6 @@ export default function Register() {
 
   const fullPhone = () => {
     const localNumber = digitsOnly(phone).replace(/^0/, '');
-
     return `${dialCode}${localNumber}`;
   };
 
@@ -192,7 +191,12 @@ export default function Register() {
         countryCode: country,
       });
 
-      if (data?.session?.user?.phone_confirmed_at) {
+      const registeredUser = data?.session?.user;
+
+      if (
+        registeredUser?.phone === number &&
+        registeredUser?.phone_confirmed_at
+      ) {
         navigate('/onboarding', {
           replace: true,
           state: { from: destination },
@@ -200,7 +204,8 @@ export default function Register() {
         return;
       }
 
-      setPhone(number);
+      setPendingPhone(number);
+      setOtp('');
       setStep('otp');
     } catch (err) {
       setError(readableError(err));
@@ -215,29 +220,33 @@ export default function Register() {
     setLoading(true);
 
     try {
+      if (!pendingPhone) {
+        throw new Error('Registration phone number is missing. Please restart registration.');
+      }
+
       if (!/^\d{6}$/.test(otp)) {
         throw new Error('Enter the complete 6-digit verification code.');
       }
 
-      const result = await xedruo.auth.verifyPhoneSignupOtp(
-        fullPhone(),
-        otp
-      );
+      await xedruo.auth.verifyPhoneSignupOtp(pendingPhone, otp);
 
-      if (!result?.data?.user && !result?.user) {
-        const { data, error: sessionError } =
-          await import('@/api/xedruoClient').then(async (module) => {
-            const client = module.supabase;
-            return client.auth.getSession();
-          });
+      const {
+        data: sessionData,
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-        if (sessionError) throw sessionError;
+      if (sessionError) throw sessionError;
 
-        if (!data?.session?.user) {
-          throw new Error(
-            'Phone verification succeeded, but no login session was created. Please sign in.'
-          );
-        }
+      const verifiedUser = sessionData?.session?.user;
+
+      if (
+        !verifiedUser ||
+        verifiedUser.phone !== pendingPhone ||
+        !verifiedUser.phone_confirmed_at
+      ) {
+        throw new Error(
+          'Phone verification could not be confirmed. Please sign in or try again.'
+        );
       }
 
       navigate('/onboarding', {
@@ -256,7 +265,11 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await xedruo.auth.resendPhoneSignupOtp(fullPhone());
+      if (!pendingPhone) {
+        throw new Error('Registration phone number is missing.');
+      }
+
+      await xedruo.auth.resendPhoneSignupOtp(pendingPhone);
       setOtp('');
     } catch (err) {
       setError(readableError(err));
@@ -275,7 +288,7 @@ export default function Register() {
       }
       subtitle={
         step === 'otp'
-          ? `Enter the 6-digit SMS code sent to ${phone}.`
+          ? `Enter the 6-digit SMS code sent to ${pendingPhone}.`
           : 'Register with your phone number and password. Your verified phone will be linked to your central Xedruo ID.'
       }
       footer={
@@ -390,7 +403,7 @@ export default function Register() {
               <Input
                 id="register-phone"
                 type="tel"
-                autoComplete="tel"
+                autoComplete="tel-national"
                 placeholder="8012345678"
                 value={phone}
                 onChange={(event) =>
@@ -465,7 +478,7 @@ export default function Register() {
           <div className="rounded-xl border bg-muted/30 p-4 text-sm">
             <p className="font-semibold">Check your SMS messages</p>
             <p className="text-muted-foreground mt-1">
-              We sent a verification code to {phone}. Enter it below
+              We sent a verification code to {pendingPhone}. Enter it below
               to activate your Xedruo account.
             </p>
           </div>
@@ -516,6 +529,7 @@ export default function Register() {
             onClick={() => {
               setError('');
               setOtp('');
+              setPendingPhone('');
               setStep('register');
             }}
           >
