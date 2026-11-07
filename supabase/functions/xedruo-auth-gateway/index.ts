@@ -120,6 +120,15 @@ async function readIdentity(db: SupabaseClient, userId: string): Promise<Identit
   return (data as IdentityRow) ?? null;
 }
 
+// Log full database errors server-side (function logs); return only a safe message + reference to the caller.
+function dbError(stage: string, e: { code?: string; message?: string; details?: string; hint?: string }, echo: string | null) {
+  const ref = crypto.randomUUID().slice(0, 8);
+  console.error("rpc_failed", ref, stage, JSON.stringify({ code: e.code, message: e.message, details: e.details, hint: e.hint }));
+  if (e.code === "23505") return fail("already_in_use", "That phone number or identity is already linked to an account.", 409, echo);
+  if (e.code === "P0001") return fail("rejected", String(e.message ?? "Request rejected.").slice(0, 200), 400, echo);
+  return fail("server_error", `Could not save your details (ref ${ref}).`, 500, echo);
+}
+
 const first = <T>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 const publicIdentity = (i: IdentityRow | null) =>
@@ -129,7 +138,14 @@ const publicIdentity = (i: IdentityRow | null) =>
 // Xedruo IDs are identifiers, not secrets. The password is verified by Supabase Auth; this
 // function only maps ID -> the account's login identifier and returns the session to the
 // calling company app over HTTPS. Every failure looks the same to the caller.
-const ID_RE = /^[A-Z0-9-]{6,32}$/; // ASSUMPTION: Xedruo IDs are alphanumeric, 6-32 chars (10-digit numeric today)
+// Valid IDs (see xedruo_identity_id_format): "CC-##########" (current) or "Xedruo CC ##########" (legacy).
+function idCandidates(input: string): string[] {
+  const t = input.trim().replace(/\s+/g, " ");
+  const m = t.match(/^([A-Za-z]{2})-?(\d{10})$/) ?? t.match(/^xedruo[ -]?([A-Za-z]{2})[ -]?(\d{10})$/i);
+  if (!m) return [];
+  const cc = m[1].toUpperCase();
+  return [`${cc}-${m[2]}`, `Xedruo ${cc} ${m[2]}`];
+}
 const LOGIN_WINDOW_S = 15 * 60;
 const MAX_FAILS_PER_ID = 5;
 const MAX_FAILS_PER_IP = 20;
@@ -150,7 +166,8 @@ async function idLogin(req: Request, company: Company, echo: string | null): Pro
   let body: Record<string, unknown> = {};
   try { body = JSON.parse(raw || "{}"); } catch { return fail("bad_request", "Invalid JSON.", 400, echo); }
 
-  const xedruoId = String(body.xedruoId ?? "").replace(/\s+/g, "").toUpperCase();
+  const candidates = idCandidates(String(body.xedruoId ?? ""));
+  const xedruoId = candidates[0] ?? "invalid";
   const password = typeof body.password === "string" ? body.password : "";
 
   const ipKey = `ip:${await sha256(clientIp(req))}`;
@@ -171,14 +188,14 @@ async function idLogin(req: Request, company: Company, echo: string | null): Pro
     return reply({ error: "rate_limited", message: "Too many attempts. Try again later." }, 429, echo, { "Retry-After": String(LOGIN_WINDOW_S) });
   }
 
-  if (!ID_RE.test(xedruoId) || password.length < 1 || password.length > 128) {
+  if (!candidates.length || password.length < 1 || password.length > 128) {
     await recordFailure();
     return badLogin();
   }
 
   // Map Xedruo ID -> the account's Supabase login identifier (server-side only).
   let creds: { email: string } | { phone: string } | null = null;
-  const { data: ident } = await admin.from("xedruo_identity").select("user_id").eq("xedruo_id", xedruoId).maybeSingle();
+  const { data: ident } = await admin.from("xedruo_identity").select("user_id").in("xedruo_id", candidates).limit(1).maybeSingle();
   if (ident?.user_id) {
     const { data: au } = await admin.auth.admin.getUserById(ident.user_id);
     if (au?.user?.email) creds = { email: au.user.email };
@@ -214,10 +231,11 @@ async function idLogin(req: Request, company: Company, echo: string | null): Pro
 // ---------- handler ----------
 Deno.serve(async (req) => {
   const origin = normOrigin(req.headers.get("origin"));
+  let echo: string | null = null; // set once the origin is verified, so error responses carry CORS headers too
   try {
     const companies = await registry();
     const originAllowed = !!origin && companies.some((c) => c.origin === origin);
-    const echo = originAllowed ? origin : null; // CORS only for verified company origins
+    echo = originAllowed ? origin : null; // CORS only for verified company origins
 
     if (req.method === "OPTIONS") {
       return originAllowed ? new Response(null, { status: 204, headers: corsFor(echo) }) : new Response(null, { status: 403 });
@@ -293,7 +311,7 @@ Deno.serve(async (req) => {
       }
       if (!identity?.xedruo_id) {
         const { error } = await userDb.rpc("ensure_xedruo_identity", { p_country_code: countryCode });
-        if (error) throw error;
+        if (error) return dbError("ensure_xedruo_identity", error, echo);
       }
       const { error: onErr } = await userDb.rpc("complete_xedruo_identity_onboarding", {
         p_country_code: countryCode,
@@ -301,7 +319,7 @@ Deno.serve(async (req) => {
         p_legal_name: legalName,
         p_company_slug: company.slug,
       });
-      if (onErr) throw onErr;
+      if (onErr) return dbError("complete_xedruo_identity_onboarding", onErr, echo);
       identity = await readIdentity(userDb, user.id);
       audit("onboarding_completed", { user: user.id, company: company.slug, country: countryCode });
       return reply({ identity: publicIdentity(identity), missing: missingFields(identity) }, 200, echo);
@@ -318,7 +336,7 @@ Deno.serve(async (req) => {
         p_company_slug: company.slug,
         p_display_name: identity!.legal_name,
       });
-      if (error) throw error;
+      if (error) return dbError("ensure_xedruo_company_profile", error, echo);
       const membership = first(data as Record<string, unknown> | Record<string, unknown>[] | null);
       audit("access_granted", { user: user.id, company: company.slug });
       return reply({
@@ -331,8 +349,8 @@ Deno.serve(async (req) => {
 
     return fail("not_found", "Unknown route.", 404, echo);
   } catch (err) {
-    console.error("gateway_error", err instanceof Error ? err.message : err);
-    // No CORS headers on unexpected failures: fail closed without leaking details.
-    return fail("server_error", "Something went wrong. Please try again.", 500, null);
+    const ref = crypto.randomUUID().slice(0, 8);
+    console.error("gateway_error", ref, err instanceof Error ? err.message : JSON.stringify(err));
+    return fail("server_error", `Something went wrong (ref ${ref}). Please try again.`, 500, echo);
   }
 });
