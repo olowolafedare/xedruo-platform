@@ -182,7 +182,7 @@ export default function Login() {
         throw result.error;
       }
 
-      // Confirm that Supabase has established an authenticated session.
+    
       const {
         data: sessionData,
         error: sessionError,
@@ -276,8 +276,6 @@ export default function Login() {
           return;
         }
 
-        // Prevent repeated redirects if a connected product sends the
-        // authenticated user back to the Xedruo login page.
         if (sessionStorage.getItem('xedruo_handoff_attempt')) return;
 
         sessionStorage.setItem('xedruo_handoff_attempt', '1');
@@ -289,7 +287,7 @@ export default function Login() {
           { replace: true }
         );
       } catch {
-        // If session or identity lookup fails, show the login form.
+        // If session or identity lookup fails, show the login form---Bright Emmanuel Emeka
       } finally {
         if (alive) setChecking(false);
       }

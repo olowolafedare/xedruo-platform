@@ -93,7 +93,7 @@ export default function AuthCallback() {
           localStorage.getItem(AUTH_RETURN_KEY)
         );
 
-        // Check the existing identity without creating or modifying it.
+     
         const { data: identity, error: identityError } =
           await supabase
             .from('xedruo_identity')
@@ -118,8 +118,7 @@ export default function AuthCallback() {
           authPhoneVerified &&
           identity.phone_e164 === session.user.phone;
 
-        // Incomplete Google users must complete phone verification
-        // and identity onboarding before entering company applications.
+      
         if (!identityComplete) {
           localStorage.setItem(AUTH_RETURN_KEY, destination);
 
@@ -137,7 +136,6 @@ export default function AuthCallback() {
           return;
         }
 
-        // Identity is already complete. Continue with normal handoff.
         localStorage.removeItem(AUTH_RETURN_KEY);
         localStorage.removeItem('xedruo_oauth_company');
 

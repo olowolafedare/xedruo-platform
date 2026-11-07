@@ -18,14 +18,6 @@ export async function getIdentity() {
 
   return data || null;
 }
-
-/**
- * Completes Xedruo identity onboarding.
- *
- * The phone must already be verified through Supabase Auth.
- * The database RPC is responsible for creating or preserving
- * the permanent Xedruo ID.
- */
 export async function saveCustomerContact({
   countryCode,
   phoneE164,
@@ -60,7 +52,6 @@ export async function saveCustomerContact({
     throw new Error('Enter your full legal name (3–160 characters).');
   }
 
-  // Do not issue an identity until Supabase confirms this exact phone.
   if (me.phone !== normalizedPhone || !me.phone_confirmed_at) {
     throw new Error(
       'Verify this phone number before completing Xedruo identity onboarding.'

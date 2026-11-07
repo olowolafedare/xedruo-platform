@@ -329,7 +329,7 @@ export default function IdentityOnboarding() {
         throw new Error('Authentication required.');
       }
 
-      // If this exact phone is already confirmed, no new OTP is needed.
+   
       if (
         currentAuthUser.phone === fullPhone &&
         currentAuthUser.phone_confirmed_at
@@ -339,8 +339,7 @@ export default function IdentityOnboarding() {
         return;
       }
 
-      // Attach or change the Auth phone number.
-      // Supabase sends a phone-change OTP to the submitted number.
+   
       const { error: updateError } = await supabase.auth.updateUser({
         phone: fullPhone,
       });
