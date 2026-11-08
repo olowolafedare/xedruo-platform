@@ -31,6 +31,10 @@ const REG = {
 
 type Company = { slug: string; name: string; origin: string };
 
+// Policy switch: SMS/phone verification is NOT required. Set the function secret
+// XEDRUO_REQUIRE_PHONE_VERIFICATION=true (and redeploy) to require it again.
+const REQUIRE_PHONE_VERIFICATION = Deno.env.get("XEDRUO_REQUIRE_PHONE_VERIFICATION") === "true";
+
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
 // ---------- registry (cached 60s per isolate) ----------
@@ -114,7 +118,7 @@ function missingFields(i: IdentityRow | null, authPhone: string | null, phoneCon
   if (!i?.legal_name?.trim()) m.push("legal_name");
   if (!i?.xedruo_id) m.push("xedruo_id");
   const phoneVerified = Boolean(authPhone) && Boolean(phoneConfirmedAt) && Boolean(i?.phone_verified_at) && phonesMatch(i?.phone_e164, authPhone);
-  if (!phoneVerified) m.push("phone_verification");
+  if (REQUIRE_PHONE_VERIFICATION && !phoneVerified) m.push("phone_verification");
   return m;
 }
 
@@ -313,7 +317,7 @@ Deno.serve(async (req) => {
       if (!COUNTRY_RE.test(countryCode)) return fail("invalid_country", "Select a valid country.", 400, echo);
       if (!PHONE_RE.test(phoneE164)) return fail("invalid_phone", "Enter a valid international phone number.", 400, echo);
       if (legalName.length < 3 || legalName.length > 160) return fail("invalid_name", "Enter your full legal name (3-160 characters).", 400, echo);
-      if (!user.phone_confirmed_at || !phonesMatch(user.phone, phoneE164)) {
+      if (REQUIRE_PHONE_VERIFICATION && (!user.phone_confirmed_at || !phonesMatch(user.phone, phoneE164))) {
         return fail("phone_not_verified", "Verify this phone number before completing Xedruo identity registration.", 409, echo);
       }
 
