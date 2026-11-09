@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { sql, hash, requireSession, json, fail } from "../../_lib/auth.js";
 
 export default async function handler(req,res) {
@@ -15,7 +16,7 @@ export default async function handler(req,res) {
     const existing = await sql.query("select xedruo_id from public.xedruo_identity where user_id=$1 limit 1",[session.sub]);
     if (existing[0]) return json(res,200,{xedruo_id:existing[0].xedruo_id,already_issued:true});
     for (let attempt=0;attempt<8;attempt++) {
-      const id = String(Math.floor(1000000000+Math.random()*9000000000));
+      const id = String(randomInt(1000000000, 10000000000));
       try {
         await sql.query("insert into public.xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) values($1,$2,$3,$4,$5)",[session.sub,id,country,name,phone]);
         await sql.query("update public.xedruo_profiles set full_name=$2,updated_at=now() where id=$1",[session.sub,name]);
