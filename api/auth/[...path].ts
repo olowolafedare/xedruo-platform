@@ -502,10 +502,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const path = requestUrl.pathname.replace(/^\/api\/auth\/?/, "");
     let response: Response;
     if (method === "OPTIONS") {
+      // Browsers do not send custom request headers (including x-xedruo-company)
+      // on CORS preflight. Resolve the registered company from the Origin instead.
       const origin = originOf(webReq.headers.get("origin"));
-      const slug = (webReq.headers.get("x-xedruo-company") || "").toLowerCase();
-      const verified = origin && await verifiedCompany(webReq, slug);
-      response = verified ? new Response(null, { status: 204, headers: cors(verified.origin) }) : new Response(null, { status: 403 });
+      const registered = origin
+        ? await pool.query<{ app_origin: string }>(
+            "SELECT app_origin FROM xedruo_company_app_registry WHERE enabled=true AND app_origin=$1 LIMIT 1",
+            [origin],
+          )
+        : { rows: [] as { app_origin: string }[] };
+      response = registered.rows.length
+        ? new Response(null, { status: 204, headers: cors(origin!) })
+        : new Response(null, { status: 403 });
     } else if (method === "GET") response = await getHandler(webReq, path);
     else if (method === "POST") response = await postHandler(webReq, path);
     else response = fail("method_not_allowed", "Method not allowed.", 405);
