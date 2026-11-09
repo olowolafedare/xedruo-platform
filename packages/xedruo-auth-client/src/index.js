@@ -28,6 +28,7 @@ const safePath = (value) => typeof value === "string" && value.startsWith("/") &
 export function createXedruoAuth({
   companySlug,
   callbackPath = "/auth/callback",
+  callbackUrl: callbackUrlOverride,
   authOrigin = DEFAULT_AUTH_ORIGIN,
   storage = typeof window !== "undefined" ? window.sessionStorage : null,
 }) {
@@ -39,7 +40,7 @@ export function createXedruoAuth({
   const key = "xedruo.central." + slug;
   const verifierKey = key + ".pkce";
   const returnKey = key + ".return";
-  const callbackUrl = new URL(callbackPath, window.location.origin).toString();
+  const callbackUrl = callbackUrlOverride || new URL(callbackPath, window.location.origin).toString();
 
   const read = () => {
     try { return JSON.parse(storage.getItem(key) || "null"); } catch { return null; }
