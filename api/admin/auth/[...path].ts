@@ -26,7 +26,7 @@ function readCookie(req: IncomingMessage) {
 }
 function sameOrigin(req: IncomingMessage) {
   const origin = req.headers.origin;
-  if (!origin) return true;
+  if (!origin || !req.headers.host) return false;
   try { return new URL(origin).host === req.headers.host; } catch { return false; }
 }
 async function body(req: IncomingMessage) {
