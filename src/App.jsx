@@ -59,18 +59,16 @@ function AuthenticatedApp() {
   if (isLoadingPublicSettings || isLoadingAuth) return <Loading />
 
   const isParentRoute = location.pathname === '/parent-company'
-  if (authError) {
-    if (isParentRoute) {
-      return authError.type === 'user_not_registered' || authError.type === 'auth_required'
-        ? <ParentLogin />
-        : <UserNotRegisteredError />
-    }
-    if (!publicPaths.has(location.pathname)) {
-      if (authError.type === 'user_not_registered') return <UserNotRegisteredError />
-      if (authError.type === 'auth_required') {
+  // Parent Company uses its own private Neon administrator session, not customer auth.
+  if (authError && !isParentRoute) {
+    if (authError.type === 'user_not_registered' || authError.type === 'auth_required') {
+      if (!publicPaths.has(location.pathname)) {
+        if (authError.type === 'user_not_registered') return <UserNotRegisteredError />
         navigateToLogin()
         return null
       }
+    } else if (!publicPaths.has(location.pathname)) {
+      return <UserNotRegisteredError />
     }
   }
 
@@ -89,7 +87,7 @@ function AuthenticatedApp() {
         <Route path="/forgot-password" element={<Navigate to="/parent-company" replace />} />
         <Route path="/reset-password" element={<Navigate to="/parent-company" replace />} />
         <Route path="/onboarding" element={<Navigate to="/parent-company" replace />} />
-        <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><IdentityGate><ParentCompany /></IdentityGate></ProtectedRoute>} />
+        <Route path="/parent-company" element={<ParentCompany />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
