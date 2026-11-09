@@ -94,17 +94,40 @@ function AuthenticatedApp() {
   )
 }
 
-function App() {
+function RouteSwitcher() {
+  const location = useLocation()
+  const isPlatformAdminRoute = location.pathname === '/login' || location.pathname === '/parent-company'
+
+  // Keep platform administrator authentication completely outside the customer
+  // AuthProvider so these routes never initialize or depend on Supabase Auth.
+  if (isPlatformAdminRoute) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/login" element={<ParentLogin />} />
+          <Route path="/parent-company" element={<ParentCompany />} />
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
+      </Suspense>
+    )
+  }
+
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
+      <AuthenticatedApp />
     </AuthProvider>
+  )
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClientInstance}>
+      <Router>
+        <ScrollToTop />
+        <RouteSwitcher />
+      </Router>
+      <Toaster />
+    </QueryClientProvider>
   )
 }
 
