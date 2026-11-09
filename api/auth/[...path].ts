@@ -18,7 +18,9 @@ const required = (name: string) => {
   return value;
 };
 const pool = new Pool({ connectionString: required("DATABASE_URL"), max: 5 });
-type DbClient = Awaited<ReturnType<typeof pool.connect>>;
+type QueryExecutor = { query<T = any>(text: string, values?: any[]): Promise<{ rows: T[]; rowCount?: number | null }> };
+type DbClient = QueryExecutor & { release(): void };
+async function connectDb(): Promise<DbClient> { return await pool.connect() as unknown as DbClient; }
 const signingSecret = Buffer.from(required("XEDRUO_SESSION_SIGNING_SECRET"), "utf8");
 if (signingSecret.length < 32) throw new Error("XEDRUO_SESSION_SIGNING_SECRET must be at least 32 bytes");
 const issuer = process.env.AUTH_ISSUER || "https://xedruo.com";
@@ -123,7 +125,7 @@ async function authenticate(req: Request, company: string) {
   );
   return session.rows.length ? { claims, userId: claims.sub } : null;
 }
-async function issueSession(userId: string, company: string, req: Request, db: DbClient | typeof pool = pool) {
+async function issueSession(userId: string, company: string, req: Request, db: QueryExecutor = pool) {
   const refresh = randomToken(48);
   const expiry = new Date(Date.now() + refreshDays * 86400000);
   const r = await db.query<{ id: string }>(
@@ -138,7 +140,7 @@ async function issueSession(userId: string, company: string, req: Request, db: D
     refresh_expires_at: expiry.toISOString(),
   };
 }
-async function makeId(db: DbClient) {
+async function makeId(db: QueryExecutor) {
   for (let i = 0; i < 20; i++) {
     const id = String(randomInt(1000000000, 10000000000));
     const r = await db.query("SELECT 1 FROM xedruo_identity WHERE xedruo_id=$1", [id]);
@@ -292,7 +294,7 @@ async function postHandler(req: Request, path: string) {
     if (!company.allowed_callbacks.includes(callbackUrl) || !code || !/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) {
       return withCors(fail("invalid_code", "Authorization code, callback or PKCE verifier is invalid.", 400), verified.origin);
     }
-    const db = await pool.connect();
+    const db = await connectDb();
     try {
       await db.query("BEGIN");
       const r = await db.query<{ user_id: string; pkce_challenge: string }>(
