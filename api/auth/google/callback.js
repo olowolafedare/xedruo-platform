@@ -21,7 +21,7 @@ export default async function handler(req,res) {
     const verifyResponse = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token="+encodeURIComponent(tokenData.id_token));
     const claims = await verifyResponse.json();
     const validIssuer = ["accounts.google.com","https://accounts.google.com"].includes(claims.iss);
-    if (!verifyResponse.ok || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || Number(claims.exp)*1000<=Date.now() || claims.nonce !== undefined && hash(claims.nonce)!==tx.nonce_hash || claims.email_verified !== "true") {
+    if (!verifyResponse.ok || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || Number(claims.exp)*1000<=Date.now() || (!claims.nonce || hash(claims.nonce)!==tx.nonce_hash) || claims.email_verified !== "true") {
       return fail(res,401,"invalid_google_identity","Google identity verification failed.");
     }
     const subject = String(claims.sub || "");
