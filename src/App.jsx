@@ -77,7 +77,7 @@ function AuthenticatedApp() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/parent-company" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/ecosystem" element={<Navigate to="/" replace />} />
         <Route path="/pricing" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
