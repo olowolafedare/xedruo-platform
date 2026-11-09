@@ -201,7 +201,6 @@ const missingIdentity = (i: Identity | null) => [
 
 async function getHandler(req: Request, path: string) {
   const url = new URL(req.url);
-  if (path === "google/callback") return googleCallback(req);
   if (path === "countries") {
     const slug = url.searchParams.get("companySlug") || req.headers.get("x-xedruo-company") || "";
     const verified = await verifiedCompany(req, slug);
@@ -233,6 +232,8 @@ async function postHandler(req: Request, path: string) {
   if (!verified) return fail("company_not_authorized", "This app origin is not registered for that company.", 403);
   const company = verified.company;
   let response: Response;
+
+  if (path === "google/complete") return withCors(await googleCallback(req, body, company), verified.origin);
 
   if (path === "id/login") {
     const login = String(body.login || body.xedruoId || "").trim();
@@ -281,7 +282,7 @@ async function postHandler(req: Request, path: string) {
     );
     const google = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     google.search = new URLSearchParams({
-      client_id: googleClientId, redirect_uri: googleRedirectUri, response_type: "code",
+      client_id: googleClientId, redirect_uri: callbackUrl, response_type: "code",
       scope: "openid email profile", state: combined, nonce, prompt: "select_account",
     }).toString();
     return withCors(reply({ authorization_url: google.toString(), state }), verified.origin);
@@ -410,12 +411,14 @@ async function postHandler(req: Request, path: string) {
   return withCors(fail("not_found", "Unknown route.", 404), verified.origin);
 }
 
-async function googleCallback(req: Request) {
-  const url = new URL(req.url);
-  const googleCode = url.searchParams.get("code") || "";
-  const stateParam = url.searchParams.get("state") || "";
+async function googleCallback(req: Request, body: Record<string, unknown>, company: Company) {
+  const googleCode = String(body.code || "");
+  const stateParam = String(body.state || "");
+  const callbackUrl = String(body.callbackUrl || "");
   const parts = stateParam.split(".");
-  if (!googleCode || parts.length !== 2) return fail("google_oauth_failed", "Google sign-in was not completed.", 400);
+  if (!googleCode || parts.length !== 2 || !company.allowed_callbacks.includes(callbackUrl)) {
+    return fail("google_oauth_failed", "Google sign-in response, state or company callback is invalid.", 400);
+  }
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
@@ -424,11 +427,11 @@ async function googleCallback(req: Request) {
       [sha(parts[0])],
     );
     const tx = txr.rows[0];
-    if (!tx) throw new Error("oauth_transaction_invalid");
+    if (!tx || tx.company_slug !== company.company_slug || tx.callback_url !== callbackUrl) throw new Error("oauth_transaction_invalid");
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code: googleCode, client_id: googleClientId, client_secret: googleClientSecret, redirect_uri: googleRedirectUri, grant_type: "authorization_code" }),
+      body: new URLSearchParams({ code: googleCode, client_id: googleClientId, client_secret: googleClientSecret, redirect_uri: callbackUrl, grant_type: "authorization_code" }),
     });
     const tokenBody = await tokenRes.json() as { id_token?: string };
     if (!tokenRes.ok || !tokenBody.id_token) throw new Error("google_exchange_failed");
@@ -453,8 +456,6 @@ async function googleCallback(req: Request) {
       "INSERT INTO xedruo_oauth_identities(user_id,provider,provider_subject,email,email_verified) VALUES($1,'google',$2,$3,true) ON CONFLICT(provider,provider_subject) DO UPDATE SET email=EXCLUDED.email,email_verified=true",
       [userId, claims.sub, email],
     );
-    const company = await getCompany(tx.company_slug);
-    if (!company || !company.allowed_callbacks.includes(tx.callback_url)) throw new Error("company_callback_invalid");
     const authCode = randomToken(32);
     await db.query(
       "INSERT INTO xedruo_auth_codes(code_hash,user_id,company_slug,callback_url,pkce_challenge,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '90 seconds')",
@@ -462,10 +463,8 @@ async function googleCallback(req: Request) {
     );
     await db.query("UPDATE xedruo_oauth_transactions SET consumed_at=now() WHERE id=$1", [tx.id]);
     await db.query("COMMIT");
-    const redirect = new URL(tx.callback_url);
-    redirect.searchParams.set("code", authCode);
-    redirect.searchParams.set("state", Buffer.from(parts[1], "base64url").toString("utf8"));
-    return Response.redirect(redirect, 302);
+    await audit("google_login_succeeded", userId, company.company_slug);
+    return reply({ code: authCode, state: Buffer.from(parts[1], "base64url").toString("utf8"), callbackUrl });
   } catch (e) {
     await db.query("ROLLBACK").catch(() => undefined);
     console.error("xedruo_google_callback_failed", e);
