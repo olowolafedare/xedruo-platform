@@ -108,8 +108,29 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       "SELECT id,email,password_hash,role FROM public.xedruo_platform_admins WHERE lower(email)=$1 AND status='active' LIMIT 1",
       [email]
     );
-    const admin = found.rows[0];
-    const ok = admin ? await checkPassword(password,admin.password_hash) : (await scrypt(password,Buffer.alloc(16),64),false);
+    let admin = found.rows[0];
+    let ok = admin ? await checkPassword(password,admin.password_hash) : false;
+    // A one-time, hash-only bootstrap is allowed only while the admin table is empty.
+    // Remove the two bootstrap environment variables after the first successful login.
+    if (!blocked && !admin) {
+      const bootstrapEmail = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_EMAIL || "").trim().toLowerCase();
+      const bootstrapHash = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_PASSWORD_HASH || "");
+      const bootstrapRole = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_ROLE || "ceo");
+      const allowedRoles = new Set(["governor","ceo","cfo","developer","customer_service","operations"]);
+      if (bootstrapEmail && bootstrapHash && email === bootstrapEmail && allowedRoles.has(bootstrapRole) &&
+          await checkPassword(password,bootstrapHash)) {
+        const count = await pool.query("SELECT count(*)::int AS total FROM public.xedruo_platform_admins");
+        if (Number(count.rows[0]?.total || 0) === 0) {
+          const created = await pool.query(
+            "INSERT INTO public.xedruo_platform_admins(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,password_hash,role",
+            [email,bootstrapHash,bootstrapRole]
+          );
+          admin = created.rows[0];
+          ok = Boolean(admin);
+        }
+      }
+    }
+    if (!admin) await scrypt(password,Buffer.alloc(16),64);
     if (blocked || !admin || !ok) {
       return json(res,401,{error:"invalid_credentials",message:"Email or password is incorrect."});
     }
