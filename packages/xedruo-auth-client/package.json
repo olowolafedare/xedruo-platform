@@ -1,10 +1,11 @@
 {
   "name": "@xedruo/auth-client",
   "version": "0.1.0",
-  "description": "Shared sign-in client for Xedruo company apps. Auth completes on the product's own origin; the platform gateway only validates access.",
+  "description": "Browser client for Xedruo central Neon authentication API; no Supabase dependency.",
   "type": "module",
   "main": "src/index.js",
-  "exports": { ".": "./src/index.js" },
-  "sideEffects": false,
-  "peerDependencies": { "@supabase/supabase-js": "^2.45.0" }
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "sideEffects": false
 }
