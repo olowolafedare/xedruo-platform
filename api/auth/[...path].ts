@@ -26,7 +26,6 @@ if (signingSecret.length < 32) throw new Error("XEDRUO_SESSION_SIGNING_SECRET mu
 const issuer = process.env.AUTH_ISSUER || "https://xedruo.com";
 const googleClientId = required("GOOGLE_CLIENT_ID");
 const googleClientSecret = required("GOOGLE_CLIENT_SECRET");
-const googleRedirectUri = process.env.XEDRUO_GOOGLE_REDIRECT_URI || "https://xedruo.com/api/auth/google/callback";
 const accessTtl = 900;
 const refreshDays = 30;
 const scrypt = promisify(scryptCallback);
