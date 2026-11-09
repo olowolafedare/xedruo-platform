@@ -1,200 +1,154 @@
 // @xedruo/auth-client
-// Shared, framework-agnostic sign-in client for every Xedruo company app.
-//
-// Rules this client enforces:
-//  - Sign-in starts and ends on the product's own origin. No redirect to the platform.
-//  - The product keeps its own session (storage key is per company).
-//  - The platform gateway is only asked "is this user onboarded and granted for my company?".
-//  - Any failure fails closed: it throws, it never falls back to another app or dashboard.
-
-import { createClient } from '@supabase/supabase-js';
+// Browser client for Xedruo's Neon-backed central authentication API.
+// Company apps keep their own callback URL and session; the platform never hosts their dashboard.
 
 export class XedruoAuthError extends Error {
-  constructor(code, message, status) {
+  constructor(code, message, status = 0) {
     super(message);
-    this.name = 'XedruoAuthError';
+    this.name = "XedruoAuthError";
     this.code = code;
     this.status = status;
   }
 }
 
-const RETURN_KEY = 'xedruo_return_to';
-
-// Same-origin relative path only: one leading slash, no "//", no backslash.
-function safePath(value) {
-  if (typeof value !== 'string' || !value.startsWith('/')) return null;
-  if (value.startsWith('//') || value.includes('\\')) return null;
-  return value;
-}
+const DEFAULT_AUTH_ORIGIN = "https://xedruo.com";
+const b64url = (bytes) => {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+};
+const randomVerifier = () => {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return b64url(bytes);
+};
+const sha256 = async (value) => b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))));
+const safePath = (value) => typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : null;
 
 export function createXedruoAuth({
-  supabaseUrl,
-  supabasePublishableKey,
-  gatewayUrl, // e.g. https://<project>.supabase.co/functions/v1/xedruo-auth-gateway
-  companySlug, // must equal the slug registered in xedruo_company_app_registry
-  callbackPath = '/auth/callback',
-  onboardingPath = '/onboarding',
-  dashboardPath = '/dashboard',
+  companySlug,
+  callbackPath = "/auth/callback",
+  authOrigin = DEFAULT_AUTH_ORIGIN,
+  storage = typeof window !== "undefined" ? window.sessionStorage : null,
 }) {
-  if (!supabaseUrl || !supabasePublishableKey || !gatewayUrl || !companySlug) {
-    throw new Error('createXedruoAuth: supabaseUrl, supabasePublishableKey, gatewayUrl and companySlug are required.');
-  }
+  if (!companySlug) throw new Error("companySlug is required.");
+  if (typeof window === "undefined" || !storage) throw new Error("XedruoAuth must be initialized in a browser.");
   const slug = String(companySlug).trim().toLowerCase();
-  const gateway = gatewayUrl.replace(/\/$/, '');
+  const origin = authOrigin.replace(/\/$/, "");
+  const api = origin + "/api/auth";
+  const key = "xedruo.central." + slug;
+  const verifierKey = key + ".pkce";
+  const returnKey = key + ".return";
+  const callbackUrl = new URL(callbackPath, window.location.origin).toString();
 
-  const supabase = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: {
-      flowType: 'pkce',
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false, // the callback exchanges the code explicitly
-      storageKey: `xedruo-auth-${slug}`, // session belongs to this product only
-    },
-  });
+  const read = () => {
+    try { return JSON.parse(storage.getItem(key) || "null"); } catch { return null; }
+  };
+  const save = (session) => storage.setItem(key, JSON.stringify(session));
+  const clear = () => storage.removeItem(key);
 
-  const callbackUrl = () => new URL(callbackPath, window.location.origin).toString();
-
-  async function call(path, { method = 'GET', body, authenticated = true } = {}) {
-    const headers = { 'Content-Type': 'application/json', 'X-Xedruo-Company': slug };
-    if (authenticated) {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (!token) throw new XedruoAuthError('unauthenticated', 'Sign in required.', 401);
-      headers.Authorization = `Bearer ${token}`;
-    }
-    let res;
+  async function request(path, { method = "GET", token, body } = {}) {
+    let response;
     try {
-      res = await fetch(`${gateway}${path}`, {
+      response = await fetch(api + path, {
         method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
+        headers: {
+          ...(body ? { "Content-Type": "application/json" } : {}),
+          ...(token ? { Authorization: "Bearer " + token } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        cache: "no-store",
       });
     } catch {
-      throw new XedruoAuthError('network', 'Could not reach Xedruo sign-in. Please try again.', 0);
+      throw new XedruoAuthError("network_error", "Could not reach Xedruo authentication.", 0);
     }
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new XedruoAuthError(json.error || 'request_failed', json.message || 'Request failed.', res.status);
-    return json;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new XedruoAuthError(data.error || "request_failed", data.message || "Authentication request failed.", response.status);
+    return data;
   }
 
-  const rememberReturnTo = (returnTo) => {
-    const p = safePath(returnTo);
-    try { p ? sessionStorage.setItem(RETURN_KEY, p) : sessionStorage.removeItem(RETURN_KEY); } catch { /* storage unavailable */ }
-  };
-  const consumeReturnTo = () => {
-    try {
-      const p = safePath(sessionStorage.getItem(RETURN_KEY));
-      sessionStorage.removeItem(RETURN_KEY);
-      return p;
-    } catch { return null; }
-  };
-
-  // --- sign-in methods (all complete on this product's origin) ---
-  async function signInWithGoogle({ returnTo, queryParams } = {}) {
-    rememberReturnTo(returnTo);
-    // redirectTo carries no query string: it must match the registered callback exactly.
-    // queryParams are passed to Google (e.g. { prompt: 'select_account' }), not to the callback.
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: callbackUrl(), queryParams },
+  async function signInWithGoogle({ returnTo, prompt = "select_account" } = {}) {
+    const verifier = randomVerifier();
+    const challenge = await sha256(verifier);
+    storage.setItem(verifierKey, verifier);
+    const path = safePath(returnTo);
+    if (path) storage.setItem(returnKey, path);
+    else storage.removeItem(returnKey);
+    const params = new URLSearchParams({
+      company_slug: slug,
+      callback_url: callbackUrl,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
     });
-    if (error) throw new XedruoAuthError('oauth_start_failed', 'Could not start Google sign-in.', 400);
+    // The central API validates the registered callback before redirecting to Google.
+    window.location.assign(api + "/google/start?" + params.toString() + (prompt === "select_account" ? "" : "&prompt=" + encodeURIComponent(prompt)));
   }
 
-  async function signInWithPassword(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    // Generic message on purpose: never reveal whether the email exists.
-    if (error) throw new XedruoAuthError('invalid_credentials', 'Incorrect email or password.', 401);
-    return getAccess();
-  }
-
-  // Xedruo ID + password. The gateway verifies the credentials and returns the session directly
-  // to this app (no browser redirect, nothing in the URL); it is stored under THIS product's key.
-  async function signInWithXedruoId(xedruoId, password) {
-    const { session } = await call('/auth/v1/id/login', {
-      method: 'POST',
-      body: { xedruoId, password },
-      authenticated: false,
-    });
-    const { error } = await supabase.auth.setSession({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-    });
-    if (error) throw new XedruoAuthError('session_failed', 'Sign-in could not be completed. Please try again.', 400);
-    return getAccess();
-  }
-
-  async function signUpWithPassword(email, password) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: callbackUrl() },
-    });
-    if (error) throw new XedruoAuthError('signup_failed', error.message, error.status || 400);
-    // With email confirmation on there is no session yet; the confirm link lands on the callback.
-    return { needsEmailConfirmation: !data.session };
-  }
-
-  // Call this on the product's callback route. Idempotent per code (safe under React StrictMode).
-  const exchanges = new Map();
-  function handleCallback() {
+  async function handleCallback() {
     const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error');
-    if (oauthError) return Promise.reject(new XedruoAuthError('oauth_error', 'Sign-in was cancelled or failed. Please try again.', 400));
-    if (!code) return Promise.reject(new XedruoAuthError('missing_code', 'Sign-in did not return a valid code. Please start again.', 400));
-    if (exchanges.has(code)) return exchanges.get(code);
-    const p = (async () => {
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      window.history.replaceState({}, '', url.pathname); // drop ?code= from the address bar
-      if (error) {
-        const expired = /code verifier|pkce/i.test(error.message || '');
-        throw new XedruoAuthError(
-          expired ? 'pkce_state_lost' : 'exchange_failed',
-          expired ? 'This sign-in expired or was opened in another browser. Please start again.' : 'Sign-in could not be completed.',
-          400,
-        );
-      }
-      return getAccess();
-    })();
-    exchanges.set(code, p);
-    return p;
+    const code = url.searchParams.get("code");
+    if (url.searchParams.has("error") || url.searchParams.has("error_description")) {
+      throw new XedruoAuthError("oauth_failed", "Google sign-in was cancelled or could not be completed.", 400);
+    }
+    if (!code) throw new XedruoAuthError("missing_code", "The sign-in callback did not contain an authorization code.", 400);
+    const verifier = storage.getItem(verifierKey);
+    if (!verifier) throw new XedruoAuthError("pkce_state_missing", "This sign-in session expired. Please start again.", 400);
+    const session = await request("/google/exchange", {
+      method: "POST",
+      body: { code, company_slug: slug, callback_url: callbackUrl, code_verifier: verifier },
+    });
+    if (!session.access_token || !session.refresh_token) throw new XedruoAuthError("invalid_session", "Xedruo did not return a valid company session.", 502);
+    save({ access_token: session.access_token, refresh_token: session.refresh_token, expires_at: Date.now() + Number(session.expires_in || 900) * 1000 });
+    storage.removeItem(verifierKey);
+    window.history.replaceState({}, "", url.pathname);
+    return { ...session, returnTo: safePath(storage.getItem(returnKey)) };
   }
 
-  // --- access via the platform gateway ---
-  const getAccess = () => call('/session/validate', { method: 'POST' });
-  const getIdentity = () => call('/identity/me');
+  async function getAccess() {
+    let session = read();
+    if (!session?.access_token) throw new XedruoAuthError("unauthenticated", "Sign in required.", 401);
+    if (session.expires_at && session.expires_at <= Date.now() + 30000) {
+      const rotated = await request("/refresh", { method: "POST", body: { refresh_token: session.refresh_token, company_slug: slug } });
+      session = { ...session, ...rotated, expires_at: Date.now() + Number(rotated.expires_in || 900) * 1000 };
+      save(session);
+    }
+    return request("/session", { token: session.access_token });
+  }
 
   async function onboard({ countryCode, phoneE164, legalName }) {
-    await call('/identity/onboarding', { method: 'POST', body: { countryCode, phoneE164, legalName } });
-    return getAccess();
-  }
-
-  // Where to send the user next, on THIS product. Never leaves the origin.
-  function nextPath(access) {
-    if (access?.status === 'granted') return consumeReturnTo() || dashboardPath;
-    if (access?.status === 'onboarding_required') return onboardingPath;
-    throw new XedruoAuthError('access_denied', 'Access could not be granted.', 403);
+    const session = read();
+    if (!session?.access_token) throw new XedruoAuthError("unauthenticated", "Sign in required.", 401);
+    return request("/identity/onboarding", {
+      method: "POST",
+      token: session.access_token,
+      body: { country_code: countryCode, phone_e164: phoneE164, legal_name: legalName },
+    });
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    const session = read();
+    try {
+      if (session?.access_token) await request("/logout", { method: "POST", token: session.access_token });
+    } finally {
+      clear();
+      storage.removeItem(verifierKey);
+      storage.removeItem(returnKey);
+    }
   }
 
   return {
-    supabase, // for the product's own data access with the user's session
     companySlug: slug,
+    callbackUrl,
     signInWithGoogle,
-    signInWithPassword,
-    signInWithXedruoId,
-    signUpWithPassword,
     handleCallback,
     getAccess,
-    getIdentity,
     onboard,
-    nextPath,
     signOut,
-    getSession: () => supabase.auth.getSession(),
-    onAuthStateChange: (cb) => supabase.auth.onAuthStateChange(cb),
+    getSession: () => read(),
+    consumeReturnTo: () => {
+      const path = safePath(storage.getItem(returnKey));
+      storage.removeItem(returnKey);
+      return path;
+    },
   };
 }
