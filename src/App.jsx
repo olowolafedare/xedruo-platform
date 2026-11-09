@@ -9,13 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 import ScrollToTop from './components/ScrollToTop'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import IdentityGate from '@/components/IdentityGate'
-import Login from './pages/Login'
 import ParentLogin from './pages/ParentLogin'
-import Register from './pages/Register'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
-import AuthCallback from './pages/AuthCallback'
-import IdentityOnboarding from './pages/IdentityOnboarding'
 import GroupLanding from './pages/GroupLanding'
 import Management from './pages/Management'
 import ParentCompany from './pages/ParentCompany'
@@ -49,8 +43,7 @@ const externalRoutes = [
 ]
 
 const publicPaths = new Set([
-  '/', '/ecosystem', '/login', '/register',
-  '/auth/callback', '/forgot-password', '/reset-password',
+  '/', '/ecosystem', '/login', '/parent-company',
   '/pricing', '/dashboard', ...externalRoutes.map(([path]) => path),
 ])
 
@@ -84,18 +77,18 @@ function AuthenticatedApp() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/" element={<GroupLanding />} />
+        <Route path="/" element={<Navigate to="/parent-company" replace />} />
         <Route path="/ecosystem" element={<Navigate to="/" replace />} />
         <Route path="/pricing" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         {externalRoutes.map(([path, url]) => <Route key={path} path={path} element={<ExternalRedirect to={url} />} />)}
-        <Route path="/management" element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />}><IdentityGate><Management /></IdentityGate></ProtectedRoute>} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/onboarding" element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />}><IdentityOnboarding /></ProtectedRoute>} />
+        <Route path="/management" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><IdentityGate><Management /></IdentityGate></ProtectedRoute>} />
+        <Route path="/login" element={<ParentLogin />} />
+        <Route path="/register" element={<Navigate to="/parent-company" replace />} />
+        <Route path="/auth/callback" element={<Navigate to="/parent-company" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/parent-company" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/parent-company" replace />} />
+        <Route path="/onboarding" element={<Navigate to="/parent-company" replace />} />
         <Route path="/parent-company" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><IdentityGate><ParentCompany /></IdentityGate></ProtectedRoute>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
