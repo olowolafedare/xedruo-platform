@@ -502,28 +502,36 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const path = requestUrl.pathname.replace(/^\/api\/auth\/?/, "");
     let response: Response;
     if (method === "OPTIONS") {
-      // Browsers do not send custom request headers (including x-xedruo-company)
-      // on CORS preflight. Resolve the registered company from the Origin instead.
+      // Preflight does not carry the company header. Reflect the requesting origin
+      // here; the actual GET/POST handler still enforces the registered company
+      // slug, app origin and callback allowlist before performing any operation.
       const origin = originOf(webReq.headers.get("origin"));
-      const registered = origin
-        ? await pool.query<{ app_origin: string }>(
-            "SELECT app_origin FROM xedruo_company_app_registry WHERE enabled=true AND app_origin=$1 LIMIT 1",
-            [origin],
-          )
-        : { rows: [] as { app_origin: string }[] };
-      response = registered.rows.length
-        ? new Response(null, { status: 204, headers: cors(origin!) })
-        : new Response(null, { status: 403 });
+      response = new Response(null, { status: 204, headers: origin ? cors(origin) : {} });
     } else if (method === "GET") response = await getHandler(webReq, path);
     else if (method === "POST") response = await postHandler(webReq, path);
     else response = fail("method_not_allowed", "Method not allowed.", 405);
+
+    // Ensure registered company origins can read structured error responses too.
+    // Authorization is still enforced by verifiedCompany() in each route.
+    const requestOrigin = originOf(webReq.headers.get("origin"));
+    if (requestOrigin && method !== "OPTIONS") {
+      const registered = await pool.query<{ app_origin: string }>(
+        "SELECT app_origin FROM xedruo_company_app_registry WHERE enabled=true AND app_origin=$1 LIMIT 1",
+        [requestOrigin],
+      );
+      if (registered.rows.length) response = withCors(response, requestOrigin);
+    }
     res.statusCode = response.status;
     response.headers.forEach((v, k) => res.setHeader(k, v));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch (e) {
     console.error("xedruo_auth_function_error", e);
     if (!res.headersSent) {
+      const origin = originOf(typeof req.headers.origin === "string" ? req.headers.origin : null);
       res.statusCode = 500;
+      if (origin) {
+        for (const [key, value] of Object.entries(cors(origin))) res.setHeader(key, value);
+      }
       res.setHeader("content-type", "application/json; charset=utf-8");
       res.end(JSON.stringify({ error: "server_error", message: "Authentication service error." }));
     } else res.end();
