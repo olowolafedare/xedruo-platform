@@ -11,11 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp';
 
 import AuthLayout from '@/components/AuthLayout';
 import { supabase } from '@/api/xedruoClient';
@@ -101,11 +96,9 @@ export default function IdentityOnboarding() {
   const [phone, setPhone] = useState('');
   const [legalName, setLegalName] = useState('');
 
-  const [otp, setOtp] = useState('');
   const [step, setStep] = useState('contact');
 
   const [identity, setIdentity] = useState(null);
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const [countryLocked, setCountryLocked] = useState(false);
   const [suspended, setSuspended] = useState(false);
 
@@ -217,25 +210,11 @@ export default function IdentityOnboarding() {
           setPhone(initialPhone);
         }
 
-        const verified =
-          Boolean(authPhone) &&
-          Boolean(currentAuthUser.phone_confirmed_at) &&
-          authPhone === initialPhone &&
-          identityPhone === authPhone &&
-          sameTimestamp(
-            current?.phone_verified_at,
-            currentAuthUser.phone_confirmed_at
-          );
-
-        setPhoneVerified(verified);
-
         const complete =
           Boolean(current?.xedruo_id) &&
           Boolean(current?.country_code) &&
-          Boolean(current?.legal_name) &&
-          Boolean(current?.phone_e164) &&
-          Boolean(current?.phone_verified_at) &&
-          verified;
+          Boolean(current?.legal_name?.trim()) &&
+          Boolean(current?.phone_e164);
 
         setStep(complete ? 'complete' : 'contact');
 
@@ -340,56 +319,36 @@ export default function IdentityOnboarding() {
     };
   };
 
-  const completeIdentity = async (verifiedPhone) => {
+  const completeIdentity = async () => {
     setError('');
-
     const {
       normalizedCountry,
       normalizedLegalName,
+      fullPhone,
     } = validateContact();
-
-    const currentAuthUser = await loadAuthUser();
-
-    if (
-      currentAuthUser.phone !== verifiedPhone ||
-      !currentAuthUser.phone_confirmed_at
-    ) {
-      throw new Error(
-        'Verify your phone number before completing your Xedruo identity.'
-      );
-    }
 
     const companySlug =
       localStorage.getItem('xedruo_oauth_company') || 'xedruo';
 
     const savedIdentity = await saveCustomerContact({
       countryCode: normalizedCountry,
-      phoneE164: verifiedPhone,
+      phoneE164: fullPhone,
       legalName: normalizedLegalName,
       companySlug,
     });
 
     if (savedIdentity?.status === 'suspended') {
       setSuspended(true);
-
       throw new Error(
         'This Xedruo identity is suspended. Please contact support.'
       );
     }
 
-    const latestAuthUser = await loadAuthUser();
-
     if (
       !savedIdentity?.xedruo_id ||
       savedIdentity.country_code !== normalizedCountry ||
-      savedIdentity.phone_e164 !== verifiedPhone ||
-      savedIdentity.legal_name !== normalizedLegalName ||
-      !savedIdentity.phone_verified_at ||
-      latestAuthUser.phone !== verifiedPhone ||
-      !sameTimestamp(
-        savedIdentity.phone_verified_at,
-        latestAuthUser.phone_confirmed_at
-      )
+      savedIdentity.phone_e164 !== fullPhone ||
+      savedIdentity.legal_name !== normalizedLegalName
     ) {
       throw new Error(
         'Your Xedruo identity could not be confirmed. Please try again.'
@@ -397,96 +356,20 @@ export default function IdentityOnboarding() {
     }
 
     localStorage.removeItem('xedruo_pending_contact');
-
     setIdentity(savedIdentity);
-    setPhone(verifiedPhone);
-    setPhoneVerified(true);
+    setPhone(fullPhone);
     setStep('complete');
-
     return savedIdentity;
   };
 
   const sendPhoneVerification = async () => {
     setError('');
     setSending(true);
-
     try {
-      const { fullPhone } = validateContact();
-      const currentAuthUser = await loadAuthUser();
-
-      if (!currentAuthUser?.id) {
-        throw new Error('Authentication required.');
-      }
-
-      if (
-        currentAuthUser.phone === fullPhone &&
-        currentAuthUser.phone_confirmed_at
-      ) {
-        await completeIdentity(fullPhone);
-        return;
-      }
-
-      const { error: updateError } = await supabase.auth.updateUser({
-        phone: fullPhone,
-      });
-
-      if (updateError) throw updateError;
-
-      setPhone(fullPhone);
-      setPhoneVerified(false);
-      setOtp('');
-      setStep('otp');
+      await completeIdentity();
     } catch (err) {
       setError(
-        readableError(
-          err,
-          'Could not send the phone verification code.'
-        )
-      );
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const verifyPhone = async () => {
-    setError('');
-    setSending(true);
-
-    try {
-      if (!/^\d{6}$/.test(otp)) {
-        throw new Error(
-          'Enter the complete 6-digit verification code.'
-        );
-      }
-
-      const fullPhone = getFullPhone();
-
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: otp,
-        type: 'phone_change',
-      });
-
-      if (verifyError) throw verifyError;
-
-      const verifiedUser = await loadAuthUser();
-
-      if (
-        verifiedUser.phone !== fullPhone ||
-        !verifiedUser.phone_confirmed_at
-      ) {
-        throw new Error(
-          'Phone verification could not be confirmed. Please try again.'
-        );
-      }
-
-      await completeIdentity(fullPhone);
-    } catch (err) {
-      setError(
-        readableError(
-          err,
-          'Phone verification failed. Check the code and try again.'
-        )
+        readableError(err, 'Could not complete your Xedruo identity.')
       );
     } finally {
       setSending(false);
@@ -573,13 +456,13 @@ export default function IdentityOnboarding() {
 
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="w-4 h-4 text-primary" />
-            Phone number verified
+            Phone number added
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Your phone number is verified and attached to your central Xedruo
-            identity. Your identity can now be used across connected Xedruo
-            services. Regional KYC can be completed when required.
+            Your phone number is attached to your central Xedruo identity.
+            SMS verification is not required. Your identity can now be used
+            across connected Xedruo services.
           </p>
         </div>
 
@@ -593,78 +476,11 @@ export default function IdentityOnboarding() {
     );
   }
 
-  if (step === 'otp') {
-    return (
-      <AuthLayout
-        icon={Phone}
-        title="Verify your phone number"
-        subtitle={`Enter the 6-digit SMS code sent to ${getFullPhone()}.`}
-      >
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="rounded-xl border bg-muted/30 p-4 mb-6 text-sm">
-          <p className="font-semibold">Check your SMS messages</p>
-          <p className="text-muted-foreground mt-1">
-            We need to verify your phone number before issuing or completing
-            your Xedruo identity.
-          </p>
-        </div>
-
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otp}
-            onChange={setOtp}
-            autoFocus
-          >
-            <InputOTPGroup>
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <InputOTPSlot key={index} index={index} />
-              ))}
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-
-        <Button
-          className="w-full h-12"
-          onClick={verifyPhone}
-          disabled={sending || otp.length !== 6}
-        >
-          {sending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            'Verify phone number'
-          )}
-        </Button>
-
-        <Button
-          variant="outline"
-          className="w-full mt-3"
-          disabled={sending}
-          onClick={() => {
-            setError('');
-            setOtp('');
-            setStep('contact');
-          }}
-        >
-          Change phone number
-        </Button>
-      </AuthLayout>
-    );
-  }
-
   return (
     <AuthLayout
       icon={ShieldCheck}
       title="Complete your Xedruo account"
-      subtitle="Confirm your legal name, issuing country and verified phone number to complete your central Xedruo identity."
+      subtitle="Add your full legal name and phone number to create your central Xedruo identity."
     >
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -689,7 +505,7 @@ export default function IdentityOnboarding() {
           />
         </div>
 
-        <div className="space-y-2">
+        {!identity?.country_code && <div className="space-y-2">
           <Label>Issuing country</Label>
 
           <Input
@@ -715,15 +531,9 @@ export default function IdentityOnboarding() {
             ))}
           </select>
 
-          {countryLocked && (
-            <p className="text-xs text-muted-foreground">
-              Your existing Xedruo identity has an issuing country that
-              cannot be changed.
-            </p>
-          )}
-        </div>
+        </div>}
 
-        {dialCode && (
+        {!identity?.country_code && dialCode && (
           <div className="space-y-2">
             <Label htmlFor="onboarding-calling-code">
               Country calling code
@@ -762,24 +572,16 @@ export default function IdentityOnboarding() {
                   dialCode +
                     digitsOnly(event.target.value).replace(/^0/, '')
                 );
-
-                setPhoneVerified(false);
               }}
               disabled={sending}
             />
           </div>
         </div>
 
-        <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-          {phoneVerified ? (
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-              This phone number is verified with Xedruo authentication.
-            </span>
-          ) : (
-            'We will send an SMS verification code before completing your Xedruo identity.'
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Your phone number is required for your Xedruo identity. We will not
+          send an SMS verification code.
+        </p>
 
         <Button
           className="w-full h-12"
@@ -795,14 +597,10 @@ export default function IdentityOnboarding() {
           {sending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {phoneVerified
-                ? 'Completing identity...'
-                : 'Sending code...'}
+              Completing identity...
             </>
-          ) : phoneVerified ? (
-            'Complete Xedruo identity'
           ) : (
-            'Send verification code'
+            'Complete Xedruo identity'
           )}
         </Button>
       </div>
