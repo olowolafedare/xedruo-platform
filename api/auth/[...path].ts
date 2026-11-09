@@ -349,6 +349,29 @@ async function postHandler(req: Request, path: string) {
     } finally { db.release(); }
   }
 
+  if (path === "session/refresh") {
+    const token = String(body.refreshToken || "");
+    if (token.length < 32) return withCors(fail("invalid_refresh_token", "Refresh token is invalid.", 401), verified.origin);
+    const db = await pool.connect();
+    try {
+      await db.query("BEGIN");
+      const r = await db.query<{ id: string; user_id: string }>(
+        "SELECT id,user_id FROM xedruo_auth_sessions WHERE refresh_token_hash=$1 AND company_slug=$2 AND revoked_at IS NULL AND expires_at>now() FOR UPDATE",
+        [sha(token), company.company_slug],
+      );
+      if (!r.rows[0] || !(await accountActive(r.rows[0].user_id))) throw new Error("refresh_invalid");
+      const identity = await identityFor(r.rows[0].user_id);
+      if (identity && identity.status !== "active") throw new Error("refresh_invalid");
+      await db.query("UPDATE xedruo_auth_sessions SET revoked_at=now() WHERE id=$1", [r.rows[0].id]);
+      const session = await issueSession(r.rows[0].user_id, company.company_slug, req, db);
+      await db.query("COMMIT");
+      return withCors(reply({ session }), verified.origin);
+    } catch {
+      await db.query("ROLLBACK").catch(() => undefined);
+      return withCors(fail("invalid_refresh_token", "Refresh token is invalid or expired.", 401), verified.origin);
+    } finally { db.release(); }
+  }
+
   const auth = await authenticate(req, company.company_slug);
   if (!auth) return withCors(fail("unauthenticated", "Sign in required.", 401), verified.origin);
 
@@ -380,28 +403,7 @@ async function postHandler(req: Request, path: string) {
     return withCors(reply({ status: "password_updated" }), verified.origin);
   }
 
-  if (path === "session/refresh") {
-    const token = String(body.refreshToken || "");
-    if (token.length < 32) return withCors(fail("invalid_refresh_token", "Refresh token is invalid.", 401), verified.origin);
-    const db = await pool.connect();
-    try {
-      await db.query("BEGIN");
-      const r = await db.query<{ id: string; user_id: string }>(
-        "SELECT id,user_id FROM xedruo_auth_sessions WHERE refresh_token_hash=$1 AND company_slug=$2 AND revoked_at IS NULL AND expires_at>now() FOR UPDATE",
-        [sha(token), company.company_slug],
-      );
-      if (!r.rows[0] || !(await accountActive(r.rows[0].user_id))) throw new Error("refresh_invalid");
-      const identity = await identityFor(r.rows[0].user_id);
-      if (identity && identity.status !== "active") throw new Error("refresh_invalid");
-      await db.query("UPDATE xedruo_auth_sessions SET revoked_at=now() WHERE id=$1", [r.rows[0].id]);
-      const session = await issueSession(r.rows[0].user_id, company.company_slug, req, db);
-      await db.query("COMMIT");
-      return withCors(reply({ session }), verified.origin);
-    } catch {
-      await db.query("ROLLBACK").catch(() => undefined);
-      return withCors(fail("invalid_refresh_token", "Refresh token is invalid or expired.", 401), verified.origin);
-    } finally { db.release(); }
-  }
+
 
   return withCors(fail("not_found", "Unknown route.", 404), verified.origin);
 }
