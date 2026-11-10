@@ -14,9 +14,9 @@ export default async function handler(req,res) {
     const countries = await sql.query("select calling_code from public.xedruo_country_calling_codes where country_code=$1 limit 1",[country]);
     if (!countries[0] || !phone.startsWith(countries[0].calling_code)) return fail(res,400,"country_phone_mismatch","The phone number prefix must match the selected country.");
     const existing = await sql.query("select xedruo_id from public.xedruo_identity where user_id=$1 limit 1",[session.sub]);
-    if (existing[0]) return json(res,200,{xedruo_id:existing[0].xedruo_id,already_issued:true});
+    if (existing[0]) return json(res,200,{xedruo_id:String(existing[0].xedruo_id).trim(),already_issued:true});
     for (let attempt=0;attempt<8;attempt++) {
-      const id = String(randomInt(1000000000, 10000000000));
+      const id = country + "-" + String(randomInt(1000000000, 10000000000));
       try {
         await sql.query("insert into public.xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) values($1,$2,$3,$4,$5)",[session.sub,id,country,name,phone]);
         await sql.query("update public.xedruo_profiles set full_name=$2,updated_at=now() where id=$1",[session.sub,name]);
@@ -25,7 +25,7 @@ export default async function handler(req,res) {
       } catch(e) {
         if (e.code==="23505") {
           const current = await sql.query("select xedruo_id from public.xedruo_identity where user_id=$1 limit 1",[session.sub]);
-          if (current[0]) return json(res,200,{xedruo_id:current[0].xedruo_id,already_issued:true});
+          if (current[0]) return json(res,200,{xedruo_id:String(current[0].xedruo_id).trim(),already_issued:true});
           if (attempt<7) continue;
           return fail(res,409,"phone_or_id_in_use","This phone number or generated identity is already in use.");
         }
