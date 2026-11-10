@@ -70,9 +70,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       if (!admin) return json(res,401,{error:"unauthenticated"});
       return json(res,200,{admin});
     }
-    if (req.method !== "POST" || !["login","logout"].includes(path)) {
-      return json(res,405,{error:"method_not_allowed"});
+    const admin = await getAdmin(req);
+    if (path === "companies" && req.method === "GET") {
+      if (!admin || !["ceo","governor"].includes(admin.role)) return json(res,403,{error:"forbidden"});
+      const rows = await pool.query("SELECT company_slug,display_name,app_origin,enabled,allowed_callbacks,allowed_logout_urls,updated_at FROM public.xedruo_company_app_registry ORDER BY display_name");
+      return json(res,200,{companies:rows.rows});
     }
+    if (req.method !== "POST" && req.method !== "PUT") return json(res,405,{error:"method_not_allowed"});
     if (!sameOrigin(req)) return json(res,403,{error:"origin_not_allowed"});
     if (path === "logout") {
       const token = readCookie(req);
@@ -83,6 +87,48 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return json(res,200,{status:"signed_out"},{ "set-cookie": clearCookie() });
     }
 
+    if (path === "password") {
+      if (!admin) return json(res,401,{error:"unauthenticated"});
+      const input = await body(req);
+      const currentPassword = String(input.currentPassword || "");
+      const newPassword = String(input.newPassword || "");
+      if (newPassword.length < 12 || newPassword.length > 128 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+        return json(res,400,{error:"weak_password",message:"Use at least 12 characters with uppercase, lowercase, a number and a symbol."});
+      }
+      const found = await pool.query("SELECT password_hash FROM public.xedruo_platform_admins WHERE id=$1 AND status='active' LIMIT 1",[admin.id]);
+      if (!found.rows[0] || !(await checkPassword(currentPassword,found.rows[0].password_hash))) {
+        return json(res,401,{error:"invalid_current_password",message:"Current password is incorrect."});
+      }
+      const salt = randomBytes(16);
+      const derived = await scrypt(newPassword,salt,64) as Buffer;
+      const encoded = "scrypt$" + salt.toString("base64url") + "$" + derived.toString("base64url");
+      await pool.query("UPDATE public.xedruo_platform_admins SET password_hash=$1,updated_at=now() WHERE id=$2",[encoded,admin.id]);
+      const currentToken = readCookie(req);
+      await pool.query("UPDATE public.xedruo_platform_admin_sessions SET revoked_at=now() WHERE admin_id=$1 AND revoked_at IS NULL AND token_hash<>$2",[admin.id,sha(currentToken)]);
+      return json(res,200,{status:"password_changed"});
+    }
+    if (path === "companies" && req.method === "PUT") {
+      if (!admin || !["ceo","governor"].includes(admin.role)) return json(res,403,{error:"forbidden"});
+      const input = await body(req);
+      const slug = String(input.companySlug || "");
+      const callbacks = input.allowedCallbacks;
+      const logoutUrls = input.allowedLogoutUrls;
+      const enabled = input.enabled;
+      if (!/^[a-z0-9-]{2,80}$/.test(slug) || !Array.isArray(callbacks) || !Array.isArray(logoutUrls) || callbacks.length > 10 || logoutUrls.length > 10 || typeof enabled !== "boolean") return json(res,400,{error:"invalid_company_settings"});
+      const validUrl = (value: unknown) => {
+        if (typeof value !== "string" || value.length > 500) return false;
+        try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password; } catch { return false; }
+      };
+      if (!callbacks.every(validUrl) || !logoutUrls.every(validUrl)) return json(res,400,{error:"invalid_url",message:"Callback and logout URLs must be valid HTTPS URLs."});
+      const existing = await pool.query("SELECT app_origin FROM public.xedruo_company_app_registry WHERE company_slug=$1",[slug]);
+      if (!existing.rows[0]) return json(res,404,{error:"company_not_found"});
+      const origin = new URL(existing.rows[0].app_origin);
+      const sameCompanyOrigin = (value: string) => new URL(value).origin === origin.origin;
+      if (![...callbacks,...logoutUrls].every(sameCompanyOrigin)) return json(res,400,{error:"url_origin_mismatch",message:"URLs must stay on this company's registered origin."});
+      const saved = await pool.query("UPDATE public.xedruo_company_app_registry SET allowed_callbacks=$1::text[],allowed_logout_urls=$2::text[],enabled=$3,updated_at=now() WHERE company_slug=$4 RETURNING company_slug,display_name,app_origin,enabled,allowed_callbacks,allowed_logout_urls,updated_at",[callbacks,logoutUrls,enabled,slug]);
+      return json(res,200,{company:saved.rows[0]});
+    }
+    if (path !== "login") return json(res,404,{error:"not_found"});
     const input = await body(req);
     const email = String(input.email || "").trim().toLowerCase();
     const password = String(input.password || "");
