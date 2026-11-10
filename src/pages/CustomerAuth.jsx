@@ -101,7 +101,7 @@ export default function CustomerAuth() {
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-xl sm:p-9">
         <div className="mb-7">
           <div className="text-xs font-black tracking-[0.24em] text-slate-500">XEDRUO IDENTITY</div>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">{mode === 'register' ? 'Create your Xedruo ID' : mode === 'email' ? 'Login with email' : 'Welcome back'}</h1>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">{mode === 'register' ? 'Create your Xedruo ID' : mode === 'email' ? 'Login with email' : 'Login'}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">{mode === 'register' ? 'Create one identity for all Xedruo companies. You will return to ' + companyLabel + '.' : 'Sign in once and continue to ' + companyLabel + '.'}</p>
         </div>
         {error && <div role="alert" className="mb-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -118,7 +118,7 @@ export default function CustomerAuth() {
             <label className="block text-sm font-medium text-slate-700">Full legal name
               <input className={inputClass} autoComplete="name" value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="As shown on your official ID" required />
             </label>
-            <button className={primaryClass} disabled={busy || !selectedCountry}>{busy ? 'Connecting to Google…' : 'Continue with Google to create ID'}</button>
+            <button className={primaryClass} disabled={busy || !selectedCountry}>{busy ? 'Connecting to Google…' : 'Continue with Google (Gmail) to create ID'}</button>
             <p className="text-xs leading-5 text-slate-500">A Google account and phone number are required. SMS verification is not used. Your random 10-digit Xedruo ID is issued after Google confirms your account.</p>
             <button type="button" onClick={() => { setMode('login'); setError(''); }} className="w-full py-2 text-sm font-medium text-slate-600">Already have an account? Log in</button>
           </form>
