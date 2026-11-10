@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building2, Save, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Building2, Save, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 async function api(path, options = {}) {
@@ -47,8 +47,8 @@ export default function CompanyRegistry() {
         enabled: draft.enabled,
       };
       await api("companies", { method: "PUT", body: JSON.stringify(payload) });
-      setNotice(company.display_name + " settings saved.");
       await load();
+      setNotice(company.display_name + " settings saved.");
     } catch (error) { setNotice(error.message); }
     finally { setSaving(""); }
   };
