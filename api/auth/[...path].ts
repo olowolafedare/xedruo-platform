@@ -244,11 +244,13 @@ async function getHandler(req: Request, path: string) {
     return new Response(null, { status: 302, headers: { location: google.toString(), "cache-control": "no-store" } });
   }
   if (path === "countries") {
-    const slug = url.searchParams.get("companySlug") || req.headers.get("x-xedruo-company") || "";
-    const verified = await verifiedCompany(req, slug);
-    if (!verified) return fail("company_not_authorized", "Company origin is not registered.", 403);
+    // Public registration metadata. Same-origin GET requests may omit Origin,
+    // so validate the company slug without requiring a browser Origin header.
+    const slug = (url.searchParams.get("companySlug") || "").trim().toLowerCase();
+    const company = await getCompany(slug);
+    if (!company) return fail("company_not_authorized", "Company is not registered or enabled.", 403);
     const r = await pool.query("SELECT country_code,calling_code,country_name FROM xedruo_country_calling_codes ORDER BY country_name");
-    return withCors(reply({ countries: r.rows }), verified.origin);
+    return reply({ countries: r.rows });
   }
   const reg = path.match(/^registry\/([a-z0-9-]{2,63})$/);
   if (reg) {
