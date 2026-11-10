@@ -491,8 +491,19 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ code: googleCode, client_id: googleClientId, client_secret: googleClientSecret, redirect_uri: googleRedirectUri, grant_type: "authorization_code" }),
     });
-    const tokenBody = await tokenRes.json() as { id_token?: string };
-    if (!tokenRes.ok || !tokenBody.id_token) throw new Error("google_exchange_failed");
+    const tokenBody = await tokenRes.json() as { id_token?: string; error?: string; error_description?: string };
+    if (!tokenRes.ok || !tokenBody.id_token) {
+      // Log Google's non-secret diagnostic fields so redirect_uri_mismatch,
+      // invalid_client and invalid_grant can be distinguished without exposing
+      // the authorization code, client secret or tokens.
+      console.error("xedruo_google_token_exchange_rejected", {
+        status: tokenRes.status,
+        error: tokenBody.error || "missing_id_token",
+        description: tokenBody.error_description || "No error description returned",
+        redirectUri: googleRedirectUri,
+      });
+      throw new Error("google_exchange_failed:" + (tokenBody.error || "unknown"));
+    }
     const claims = await verifyGoogleToken(tokenBody.id_token);
     if (typeof claims.sub !== "string" || typeof claims.nonce !== "string" || !safeEqual(sha(claims.nonce), tx.nonce_hash)) throw new Error("google_nonce_invalid");
     if (typeof claims.email !== "string" || claims.email_verified !== true) throw new Error("google_email_unverified");
