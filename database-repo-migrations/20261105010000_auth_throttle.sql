@@ -1,3 +1,4 @@
+
 -- Xedruo unified auth: durable throttle for public login endpoints.
 -- OWNER: olowolafedare/xedruo-Database (review there, then apply). Do NOT run from the platform repo.
 -- Server-only: RLS enabled with NO policies, execute granted to service_role only.
