@@ -5,6 +5,7 @@ import CompanySelector from "./CompanySelector";
 import Stat from "./Stat";
 import { Crown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CompanyRegistry from "./CompanyRegistry";
 
 export default function CEOArea() {
   const [company, setCompany] = useState(null);
@@ -26,6 +27,7 @@ export default function CEOArea() {
 
   return (
     <div className="space-y-5">
+      <CompanyRegistry />
       <div>
         <h2 className="font-display font-semibold flex items-center gap-2">
           <Crown className="w-4 h-4 text-primary" /> CEO — Company Management Oversight
