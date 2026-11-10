@@ -143,9 +143,11 @@ async function issueSession(userId: string, company: string, req: Request, db: Q
     refresh_expires_at: expiry.toISOString(),
   };
 }
-async function makeId(db: QueryExecutor) {
+async function makeId(db: QueryExecutor, countryCode: string) {
+  // The database enforces COUNTRY-##########. Generate and check the exact
+  // stored value so OAuth registration cannot violate the identity constraint.
   for (let i = 0; i < 20; i++) {
-    const id = String(randomInt(1000000000, 10000000000));
+    const id = countryCode + "-" + String(randomInt(1000000000, 10000000000));
     const r = await db.query("SELECT 1 FROM xedruo_identity WHERE xedruo_id=$1", [id]);
     if (!r.rows.length) return id;
   }
@@ -529,7 +531,7 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
       if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) throw new Error("country_phone_mismatch");
       const existingIdentity = await db.query<{ user_id: string }>("SELECT user_id FROM xedruo_identity WHERE user_id=$1 FOR UPDATE", [userId]);
       if (!existingIdentity.rows[0]) {
-        const xedruoId = await makeId(db);
+        const xedruoId = await makeId(db, countryCode);
         await db.query("INSERT INTO xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) VALUES($1,$2,$3,$4,$5)", [userId, xedruoId, countryCode, legalName, phoneE164]);
         await db.query("INSERT INTO xedruo_profiles(id,full_name) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET full_name=EXCLUDED.full_name,updated_at=now()", [userId, legalName]);
       }
