@@ -70,9 +70,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       if (!admin) return json(res,401,{error:"unauthenticated"});
       return json(res,200,{admin});
     }
-    const admin = await getAdmin(req);
+    const authenticatedAdmin = await getAdmin(req);
     if (path === "companies" && req.method === "GET") {
-      if (!admin || !["ceo","governor"].includes(admin.role)) return json(res,403,{error:"forbidden"});
+      if (!authenticatedAdmin || !["ceo","governor"].includes(authenticatedAdmin.role)) return json(res,403,{error:"forbidden"});
       const rows = await pool.query("SELECT company_slug,display_name,app_origin,enabled,allowed_callbacks,allowed_logout_urls,updated_at FROM public.xedruo_company_app_registry ORDER BY display_name");
       return json(res,200,{companies:rows.rows});
     }
@@ -88,27 +88,27 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (path === "password") {
-      if (!admin) return json(res,401,{error:"unauthenticated"});
+      if (!authenticatedAdmin) return json(res,401,{error:"unauthenticated"});
       const input = await body(req);
       const currentPassword = String(input.currentPassword || "");
       const newPassword = String(input.newPassword || "");
       if (newPassword.length < 12 || newPassword.length > 128 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
         return json(res,400,{error:"weak_password",message:"Use at least 12 characters with uppercase, lowercase, a number and a symbol."});
       }
-      const found = await pool.query("SELECT password_hash FROM public.xedruo_platform_admins WHERE id=$1 AND status='active' LIMIT 1",[admin.id]);
+      const found = await pool.query("SELECT password_hash FROM public.xedruo_platform_admins WHERE id=$1 AND status='active' LIMIT 1",[authenticatedAdmin.id]);
       if (!found.rows[0] || !(await checkPassword(currentPassword,found.rows[0].password_hash))) {
         return json(res,401,{error:"invalid_current_password",message:"Current password is incorrect."});
       }
       const salt = randomBytes(16);
       const derived = await scrypt(newPassword,salt,64) as Buffer;
       const encoded = "scrypt$" + salt.toString("base64url") + "$" + derived.toString("base64url");
-      await pool.query("UPDATE public.xedruo_platform_admins SET password_hash=$1,updated_at=now() WHERE id=$2",[encoded,admin.id]);
+      await pool.query("UPDATE public.xedruo_platform_admins SET password_hash=$1,updated_at=now() WHERE id=$2",[encoded,authenticatedAdmin.id]);
       const currentToken = readCookie(req);
-      await pool.query("UPDATE public.xedruo_platform_admin_sessions SET revoked_at=now() WHERE admin_id=$1 AND revoked_at IS NULL AND token_hash<>$2",[admin.id,sha(currentToken)]);
+      await pool.query("UPDATE public.xedruo_platform_admin_sessions SET revoked_at=now() WHERE admin_id=$1 AND revoked_at IS NULL AND token_hash<>$2",[authenticatedAdmin.id,sha(currentToken)]);
       return json(res,200,{status:"password_changed"});
     }
     if (path === "companies" && req.method === "PUT") {
-      if (!admin || !["ceo","governor"].includes(admin.role)) return json(res,403,{error:"forbidden"});
+      if (!authenticatedAdmin || !["ceo","governor"].includes(authenticatedAdmin.role)) return json(res,403,{error:"forbidden"});
       const input = await body(req);
       const slug = String(input.companySlug || "");
       const callbacks = input.allowedCallbacks;
