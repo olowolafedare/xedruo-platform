@@ -13,6 +13,7 @@ import ParentLogin from './pages/ParentLogin'
 import GroupLanding from './pages/GroupLanding'
 import Management from './pages/Management'
 import ParentCompany from './pages/ParentCompany'
+import CustomerAuth from './pages/CustomerAuth'
 
 const Loading = () => <div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /></div>
 
@@ -96,7 +97,7 @@ function AuthenticatedApp() {
 
 function RouteSwitcher() {
   const location = useLocation()
-  const isPlatformAdminRoute = location.pathname === '/login' || location.pathname === '/parent-company'
+  const isPlatformAdminRoute = location.pathname === '/login' || location.pathname === '/parent-company' || location.pathname === '/customer-auth'
 
   // Keep platform administrator authentication completely outside the customer
   // AuthProvider so these routes never initialize or depend on Supabase Auth.
@@ -106,6 +107,7 @@ function RouteSwitcher() {
         <Routes>
           <Route path="/login" element={<ParentLogin />} />
           <Route path="/parent-company" element={<ParentCompany />} />
+          <Route path="/customer-auth" element={<CustomerAuth />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </Suspense>

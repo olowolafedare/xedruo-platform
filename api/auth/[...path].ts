@@ -71,7 +71,9 @@ async function getCompany(slug: string): Promise<Company | null> {
 async function verifiedCompany(req: Request, slug: string) {
   const origin = originOf(req.headers.get("origin"));
   const company = await getCompany(slug);
-  if (!origin || !company || originOf(company.app_origin) !== origin) return null;
+  // Platform-hosted customer auth may call the gateway for a registered company.
+  const platformOrigin = originOf(issuer);
+  if (!origin || !company || (originOf(company.app_origin) !== origin && platformOrigin !== origin)) return null;
   return { company, origin };
 }
 async function audit(event: string, userId: string | null, company: string | null, details: Record<string, unknown> = {}) {
@@ -209,13 +211,30 @@ async function getHandler(req: Request, path: string) {
     const callbackUrl = url.searchParams.get("callbackUrl") || "";
     const state = url.searchParams.get("state") || "";
     const challenge = url.searchParams.get("codeChallenge") || "";
+    const countryCode = (url.searchParams.get("countryCode") || "").trim().toUpperCase();
+    const phoneE164 = (url.searchParams.get("phoneE164") || "").trim();
+    const legalName = (url.searchParams.get("legalName") || "").trim().replace(/\s+/g, " ");
+    const hasRegistration = Boolean(countryCode || phoneE164 || legalName);
     const company = await getCompany(slug);
     if (!company || !company.allowed_callbacks.includes(callbackUrl) || originOf(callbackUrl) !== originOf(company.app_origin) || !state || state.length > 256 || !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
       return fail("invalid_oauth_request", "Company, callback URL, state or PKCE challenge is invalid.", 400);
     }
+    let registration: { countryCode: string; phoneE164: string; legalName: string } | null = null;
+    if (hasRegistration) {
+      if (!/^[A-Z]{2}$/.test(countryCode) || !/^\+[1-9][0-9]{7,14}$/.test(phoneE164) || legalName.length < 3 || legalName.length > 160) {
+        return fail("invalid_registration", "Select a country and enter a valid phone number and full legal name.", 400);
+      }
+      const country = await pool.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
+      if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) {
+        return fail("country_phone_mismatch", "The phone calling code does not match the selected country.", 400);
+      }
+      registration = { countryCode, phoneE164, legalName };
+    }
     const googleState = randomToken(32);
     const nonce = randomToken(32);
-    const combined = googleState + "." + Buffer.from(state, "utf8").toString("base64url");
+    const statePart = Buffer.from(state, "utf8").toString("base64url");
+    const registrationPart = registration ? "." + Buffer.from(JSON.stringify(registration), "utf8").toString("base64url") : "";
+    const combined = googleState + "." + statePart + registrationPart;
     await pool.query(
       "INSERT INTO xedruo_oauth_transactions(state_hash,nonce_hash,pkce_challenge,company_slug,callback_url,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')",
       [sha(googleState), sha(nonce), challenge, company.company_slug, callbackUrl],
@@ -261,8 +280,8 @@ async function postHandler(req: Request, path: string) {
   if (path === "id/login") {
     const login = String(body.login || body.xedruoId || "").trim();
     const password = String(body.password || "");
-    if (!(/^\d{10}$/.test(login) || /^\+[1-9][0-9]{7,14}$/.test(login)) || !password || password.length > 128) {
-      return withCors(fail("invalid_credentials", "Incorrect Xedruo ID or password.", 401), verified.origin);
+    if (!(/^\d{10}$/.test(login) || /^\+[1-9][0-9]{7,14}$/.test(login) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login)) || !password || password.length > 128) {
+      return withCors(fail("invalid_credentials", "Enter your email, Xedruo ID or phone number and password.", 401), verified.origin);
     }
     const idKey = sha("login:" + login);
     const ipKey = sha("ip:" + (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim());
@@ -274,7 +293,7 @@ async function postHandler(req: Request, path: string) {
     const blocked = lim.rows.some((x) => Number(x.attempts) > (x.bucket_key.trim() === idKey ? 5 : 20));
     const found = blocked ? { rows: [] as { user_id: string; password_hash: string }[] } :
       await pool.query<{ user_id: string; password_hash: string }>(
-        "SELECT i.user_id,c.password_hash FROM xedruo_identity i JOIN xedruo_credentials c USING(user_id) WHERE (i.xedruo_id=$1 OR i.phone_e164=$1) AND i.status='active'",
+        "SELECT c.user_id,c.password_hash FROM xedruo_credentials c LEFT JOIN xedruo_identity i ON i.user_id=c.user_id LEFT JOIN xedruo_oauth_identities o ON o.user_id=c.user_id AND o.email_verified=true WHERE (i.xedruo_id=$1 OR i.phone_e164=$1 OR lower(o.email)=lower($1)) AND (i.status='active' OR i.status IS NULL) LIMIT 1",
         [login],
       );
     const user = found.rows[0];
@@ -284,6 +303,18 @@ async function postHandler(req: Request, path: string) {
       return withCors(fail("invalid_credentials", "Incorrect Xedruo ID or password.", 401), verified.origin);
     }
     await pool.query("DELETE FROM xedruo_auth_rate_limits WHERE bucket_key=$1", [idKey]);
+    const callbackUrl = String(body.callbackUrl || "");
+    const state = String(body.state || "");
+    const challenge = String(body.codeChallenge || "");
+    if (callbackUrl || state || challenge) {
+      if (!company.allowed_callbacks.includes(callbackUrl) || originOf(callbackUrl) !== originOf(company.app_origin) || !state || state.length > 256 || !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
+        return withCors(fail("invalid_oauth_request", "Company callback, state or PKCE challenge is invalid.", 400), verified.origin);
+      }
+      const authCode = randomToken(32);
+      await pool.query("INSERT INTO xedruo_auth_codes(code_hash,user_id,company_slug,callback_url,pkce_challenge,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '90 seconds')", [sha(authCode), user.user_id, company.company_slug, callbackUrl, challenge]);
+      await audit("email_login_succeeded", user.user_id, company.company_slug);
+      return withCors(reply({ code: authCode, state, callbackUrl }), verified.origin);
+    }
     const session = await issueSession(user.user_id, company.company_slug, req);
     await audit("id_login_succeeded", user.user_id, company.company_slug);
     return withCors(reply({ status: "authenticated", session }), verified.origin);
@@ -439,7 +470,7 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
   const stateParam = String(body.state || "");
   const callbackUrl = String(body.callbackUrl || "");
   const parts = stateParam.split(".");
-  if (!googleCode || parts.length !== 2 || !company.allowed_callbacks.includes(callbackUrl)) {
+  if (!googleCode || (parts.length !== 2 && parts.length !== 3) || !company.allowed_callbacks.includes(callbackUrl)) {
     return fail("google_oauth_failed", "Google sign-in response, state or company callback is invalid.", 400);
   }
   const db = await pool.connect();
@@ -479,6 +510,25 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
       "INSERT INTO xedruo_oauth_identities(user_id,provider,provider_subject,email,email_verified) VALUES($1,'google',$2,$3,true) ON CONFLICT(provider,provider_subject) DO UPDATE SET email=EXCLUDED.email,email_verified=true",
       [userId, claims.sub, email],
     );
+    // Registration details are bound to this one-time Google state. Phone
+    // numbers are collected but deliberately not SMS-verified.
+    if (parts.length === 3) {
+      let registration: { countryCode?: string; phoneE164?: string; legalName?: string };
+      try { registration = JSON.parse(Buffer.from(parts[2], "base64url").toString("utf8")); }
+      catch { throw new Error("registration_state_invalid"); }
+      const countryCode = String(registration.countryCode || "").toUpperCase();
+      const phoneE164 = String(registration.phoneE164 || "");
+      const legalName = String(registration.legalName || "").trim().replace(/\s+/g, " ");
+      if (!/^[A-Z]{2}$/.test(countryCode) || !/^\+[1-9][0-9]{7,14}$/.test(phoneE164) || legalName.length < 3 || legalName.length > 160) throw new Error("registration_details_invalid");
+      const country = await db.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
+      if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) throw new Error("country_phone_mismatch");
+      const existingIdentity = await db.query<{ user_id: string }>("SELECT user_id FROM xedruo_identity WHERE user_id=$1 FOR UPDATE", [userId]);
+      if (!existingIdentity.rows[0]) {
+        const xedruoId = await makeId(db);
+        await db.query("INSERT INTO xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) VALUES($1,$2,$3,$4,$5)", [userId, xedruoId, countryCode, legalName, phoneE164]);
+        await db.query("INSERT INTO xedruo_profiles(id,full_name) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET full_name=EXCLUDED.full_name,updated_at=now()", [userId, legalName]);
+      }
+    }
     const authCode = randomToken(32);
     await db.query(
       "INSERT INTO xedruo_auth_codes(code_hash,user_id,company_slug,callback_url,pkce_challenge,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '90 seconds')",
@@ -501,8 +551,8 @@ async function centralGoogleCallback(req: Request): Promise<Response> {
   const state = url.searchParams.get("state") || "";
   if (url.searchParams.has("error")) return reply({ error: "google_oauth_denied", message: "Google sign-in was cancelled or denied." }, 400);
   const parts = state.split(".");
-  if (!code || parts.length !== 2) return fail("google_oauth_failed", "Google sign-in response is invalid.", 400);
-  const tx = await pool.query<{company_slug:string; callback_url:string}>("SELECT company_slug,callback_url FROM xedruo_oauth_transactions WHERE state_hash=$1 AND consumed_at IS NULL AND expires_at>now()", [sha(parts[0])]);
+  if (!code || (parts.length !== 2 && parts.length !== 3)) return fail("google_oauth_failed", "Google sign-in response is invalid.", 400);
+  const tx = await pool.query<{company_slug:string; callback_url:string; pkce_challenge:string}>("SELECT company_slug,callback_url,pkce_challenge FROM xedruo_oauth_transactions WHERE state_hash=$1 AND consumed_at IS NULL AND expires_at>now()", [sha(parts[0])]);
   const row = tx.rows[0];
   if (!row) return fail("oauth_transaction_invalid", "This sign-in request has expired. Return to the company app and try again.", 400);
   const found = await pool.query<Company>("SELECT company_slug,display_name,app_origin,allowed_callbacks,enabled FROM xedruo_company_app_registry WHERE company_slug=$1 AND enabled=true", [row.company_slug]);
@@ -512,6 +562,17 @@ async function centralGoogleCallback(req: Request): Promise<Response> {
   if (!completed.ok) return completed;
   const payload = await completed.json() as {code?:string;state?:string;callbackUrl?:string};
   if (!payload.code || payload.state === undefined || payload.callbackUrl !== row.callback_url) return fail("google_oauth_failed", "The sign-in response could not be completed.", 401);
+  const issued = await pool.query<{ user_id: string }>("SELECT user_id FROM xedruo_auth_codes WHERE code_hash=$1 AND company_slug=$2 AND callback_url=$3", [sha(payload.code), row.company_slug, row.callback_url]);
+  const identity = issued.rows[0] ? await identityFor(issued.rows[0].user_id) : null;
+  if (!identity?.xedruo_id || !identity.phone_e164 || !identity.legal_name?.trim()) {
+    const onboarding = new URL("/customer-auth", issuer);
+    onboarding.searchParams.set("companySlug", row.company_slug);
+    onboarding.searchParams.set("callbackUrl", row.callback_url);
+    onboarding.searchParams.set("state", payload.state);
+    onboarding.searchParams.set("codeChallenge", row.pkce_challenge);
+    onboarding.searchParams.set("mode", "register");
+    return new Response(null, { status: 302, headers: { location: onboarding.toString(), "cache-control": "no-store" } });
+  }
   const destination = new URL(row.callback_url);
   destination.searchParams.set("code", payload.code);
   destination.searchParams.set("state", payload.state);
