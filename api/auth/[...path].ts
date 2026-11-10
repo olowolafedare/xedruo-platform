@@ -26,6 +26,8 @@ if (signingSecret.length < 32) throw new Error("XEDRUO_SESSION_SIGNING_SECRET mu
 const issuer = process.env.AUTH_ISSUER || "https://xedruo.com";
 const googleClientId = required("GOOGLE_CLIENT_ID");
 const googleClientSecret = required("GOOGLE_CLIENT_SECRET");
+const googleRedirectUri = process.env.XEDRUO_GOOGLE_REDIRECT_URI || "https://xedruo.com/api/auth/google/callback";
+if (new URL(googleRedirectUri).origin !== "https://xedruo.com" || new URL(googleRedirectUri).pathname !== "/api/auth/google/callback") throw new Error("Invalid central Google redirect URI");
 const accessTtl = 900;
 const refreshDays = 30;
 const scrypt = promisify(scryptCallback);
@@ -281,7 +283,7 @@ async function postHandler(req: Request, path: string) {
     );
     const google = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     google.search = new URLSearchParams({
-      client_id: googleClientId, redirect_uri: callbackUrl, response_type: "code",
+      client_id: googleClientId, redirect_uri: googleRedirectUri, response_type: "code",
       scope: "openid email profile", state: combined, nonce, prompt: "select_account",
     }).toString();
     return withCors(reply({ authorization_url: google.toString(), state }), verified.origin);
@@ -430,7 +432,7 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code: googleCode, client_id: googleClientId, client_secret: googleClientSecret, redirect_uri: callbackUrl, grant_type: "authorization_code" }),
+      body: new URLSearchParams({ code: googleCode, client_id: googleClientId, client_secret: googleClientSecret, redirect_uri: googleRedirectUri, grant_type: "authorization_code" }),
     });
     const tokenBody = await tokenRes.json() as { id_token?: string };
     if (!tokenRes.ok || !tokenBody.id_token) throw new Error("google_exchange_failed");
@@ -471,6 +473,28 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
   } finally { db.release(); }
 }
 
+async function centralGoogleCallback(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code") || "";
+  const state = url.searchParams.get("state") || "";
+  if (url.searchParams.has("error")) return reply({ error: "google_oauth_denied", message: "Google sign-in was cancelled or denied." }, 400);
+  const parts = state.split(".");
+  if (!code || parts.length !== 2) return fail("google_oauth_failed", "Google sign-in response is invalid.", 400);
+  const tx = await pool.query<{company_slug:string; callback_url:string}>("SELECT company_slug,callback_url FROM xedruo_oauth_transactions WHERE state_hash=$1 AND consumed_at IS NULL AND expires_at>now()", [sha(parts[0])]);
+  const row = tx.rows[0];
+  if (!row) return fail("oauth_transaction_invalid", "This sign-in request has expired. Return to the company app and try again.", 400);
+  const found = await pool.query<Company>("SELECT company_slug,display_name,app_origin,allowed_callbacks,enabled FROM xedruo_company_app_registry WHERE company_slug=$1 AND enabled=true", [row.company_slug]);
+  const company = found.rows[0];
+  if (!company || !company.allowed_callbacks.includes(row.callback_url)) return fail("oauth_callback_not_registered", "The company callback is not registered.", 403);
+  const completed = await googleCallback(req, { code, state, callbackUrl: row.callback_url }, company);
+  if (!completed.ok) return completed;
+  const payload = await completed.json() as {code?:string;state?:string;callbackUrl?:string};
+  if (!payload.code || payload.state === undefined || payload.callbackUrl !== row.callback_url) return fail("google_oauth_failed", "The sign-in response could not be completed.", 401);
+  const destination = new URL(row.callback_url);
+  destination.searchParams.set("code", payload.code);
+  destination.searchParams.set("state", payload.state);
+  return new Response(null, { status: 302, headers: { location: destination.toString(), "cache-control": "no-store" } });
+}
 /** Vercel Node.js serverless adapter. */
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
@@ -507,7 +531,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       // slug, app origin and callback allowlist before performing any operation.
       const origin = originOf(webReq.headers.get("origin"));
       response = new Response(null, { status: 204, headers: origin ? cors(origin) : {} });
-    } else if (method === "GET") response = await getHandler(webReq, path);
+    } else if (method === "GET" && path === "google/callback") response = await centralGoogleCallback(webReq);
+    else if (method === "GET") response = await getHandler(webReq, path);
     else if (method === "POST") response = await postHandler(webReq, path);
     else response = fail("method_not_allowed", "Method not allowed.", 405);
 
