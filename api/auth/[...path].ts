@@ -284,7 +284,7 @@ async function postHandler(req: Request, path: string) {
   if (path === "id/login") {
     const login = String(body.login || body.xedruoId || "").trim();
     const password = String(body.password || "");
-    if (!(/^\d{10}$/.test(login) || /^\+[1-9][0-9]{7,14}$/.test(login) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login)) || !password || password.length > 128) {
+    if (!(/^(?:[A-Z]{2}-)?\d{10}$/.test(login) || /^\+[1-9][0-9]{7,14}$/.test(login) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login)) || !password || password.length > 128) {
       return withCors(fail("invalid_credentials", "Enter your email, Xedruo ID or phone number and password.", 401), verified.origin);
     }
     const idKey = sha("login:" + login);
@@ -392,7 +392,7 @@ async function postHandler(req: Request, path: string) {
       const old = await db.query<Identity>("SELECT user_id,xedruo_id,country_code,legal_name,phone_e164,status FROM xedruo_identity WHERE user_id=$1 FOR UPDATE", [auth.userId]);
       if (old.rows[0]?.status !== undefined && old.rows[0]?.status !== "active") throw new Error("identity_blocked");
       if (old.rows[0]?.country_code && old.rows[0].country_code !== countryCode) throw new Error("country_locked");
-      const xedruoId = old.rows[0]?.xedruo_id || await makeId(db);
+      const xedruoId = old.rows[0]?.xedruo_id || await makeId(db, countryCode);
       await db.query(
         "INSERT INTO xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id) DO UPDATE SET legal_name=EXCLUDED.legal_name,phone_e164=EXCLUDED.phone_e164,updated_at=now()",
         [auth.userId, xedruoId, countryCode, name, phone],
