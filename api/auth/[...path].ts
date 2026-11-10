@@ -202,6 +202,28 @@ const missingIdentity = (i: Identity | null) => [
 
 async function getHandler(req: Request, path: string) {
   const url = new URL(req.url);
+  if (path === "google/start") {
+    // Top-level navigation avoids browser CORS/fetch restrictions entirely.
+    // Validate the callback against the registered company origin and allowlist.
+    const slug = (url.searchParams.get("companySlug") || "").trim().toLowerCase();
+    const callbackUrl = url.searchParams.get("callbackUrl") || "";
+    const state = url.searchParams.get("state") || "";
+    const challenge = url.searchParams.get("codeChallenge") || "";
+    const company = await getCompany(slug);
+    if (!company || !company.allowed_callbacks.includes(callbackUrl) || originOf(callbackUrl) !== originOf(company.app_origin) || !state || state.length > 256 || !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
+      return fail("invalid_oauth_request", "Company, callback URL, state or PKCE challenge is invalid.", 400);
+    }
+    const googleState = randomToken(32);
+    const nonce = randomToken(32);
+    const combined = googleState + "." + Buffer.from(state, "utf8").toString("base64url");
+    await pool.query(
+      "INSERT INTO xedruo_oauth_transactions(state_hash,nonce_hash,pkce_challenge,company_slug,callback_url,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')",
+      [sha(googleState), sha(nonce), challenge, company.company_slug, callbackUrl],
+    );
+    const google = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    google.search = new URLSearchParams({ client_id: googleClientId, redirect_uri: googleRedirectUri, response_type: "code", scope: "openid email profile", state: combined, nonce, prompt: "select_account" }).toString();
+    return new Response(null, { status: 302, headers: { location: google.toString(), "cache-control": "no-store" } });
+  }
   if (path === "countries") {
     const slug = url.searchParams.get("companySlug") || req.headers.get("x-xedruo-company") || "";
     const verified = await verifiedCompany(req, slug);
