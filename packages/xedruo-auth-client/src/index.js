@@ -17,8 +17,8 @@ const b64url = (bytes) => {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 };
-const randomVerifier = () => {
-  const bytes = new Uint8Array(32);
+const randomToken = (size = 32) => {
+  const bytes = new Uint8Array(size);
   crypto.getRandomValues(bytes);
   return b64url(bytes);
 };
@@ -39,6 +39,7 @@ export function createXedruoAuth({
   const api = origin + "/api/auth";
   const key = "xedruo.central." + slug;
   const verifierKey = key + ".pkce";
+  const stateKey = key + ".state";
   const returnKey = key + ".return";
   const callbackUrl = callbackUrlOverride || new URL(callbackPath, window.location.origin).toString();
 
@@ -54,10 +55,11 @@ export function createXedruoAuth({
       response = await fetch(api + path, {
         method,
         headers: {
+          "X-Xedruo-Company": slug,
           ...(body ? { "Content-Type": "application/json" } : {}),
           ...(token ? { Authorization: "Bearer " + token } : {}),
         },
-        ...(body ? { body: JSON.stringify(body) } : {}),
+        ...(body ? { body: JSON.stringify({ companySlug: slug, ...body }) } : {}),
         cache: "no-store",
       });
     } catch {
@@ -69,38 +71,48 @@ export function createXedruoAuth({
   }
 
   async function signInWithGoogle({ returnTo, prompt = "select_account" } = {}) {
-    const verifier = randomVerifier();
+    const verifier = randomToken(32);
     const challenge = await sha256(verifier);
+    const state = randomToken(32);
     storage.setItem(verifierKey, verifier);
+    storage.setItem(stateKey, state);
     const path = safePath(returnTo);
     if (path) storage.setItem(returnKey, path);
     else storage.removeItem(returnKey);
     const params = new URLSearchParams({
-      company_slug: slug,
-      callback_url: callbackUrl,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
+      companySlug: slug,
+      callbackUrl,
+      state,
+      codeChallenge: challenge,
     });
-    // The central API validates the registered callback before redirecting to Google.
-    window.location.assign(api + "/google/start?" + params.toString() + (prompt === "select_account" ? "" : "&prompt=" + encodeURIComponent(prompt)));
+    if (prompt && prompt !== "select_account") params.set("prompt", prompt);
+    // The central API validates the registered callback and redirects to Google.
+    window.location.assign(api + "/google/start?" + params.toString());
   }
 
   async function handleCallback() {
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
+    const returnedState = url.searchParams.get("state");
     if (url.searchParams.has("error") || url.searchParams.has("error_description")) {
       throw new XedruoAuthError("oauth_failed", "Google sign-in was cancelled or could not be completed.", 400);
     }
-    if (!code) throw new XedruoAuthError("missing_code", "The sign-in callback did not contain an authorization code.", 400);
+    if (!code || !returnedState) throw new XedruoAuthError("missing_code", "The sign-in callback did not contain an authorization code and state.", 400);
+    const expectedState = storage.getItem(stateKey);
+    if (!expectedState || returnedState !== expectedState) {
+      throw new XedruoAuthError("oauth_state_mismatch", "The sign-in session could not be verified. Please start again.", 400);
+    }
     const verifier = storage.getItem(verifierKey);
     if (!verifier) throw new XedruoAuthError("pkce_state_missing", "This sign-in session expired. Please start again.", 400);
-    const session = await request("/google/exchange", {
+    const data = await request("/oauth/exchange", {
       method: "POST",
-      body: { code, company_slug: slug, callback_url: callbackUrl, code_verifier: verifier },
+      body: { code, callbackUrl, codeVerifier: verifier },
     });
-    if (!session.access_token || !session.refresh_token) throw new XedruoAuthError("invalid_session", "Xedruo did not return a valid company session.", 502);
+    const session = data.session;
+    if (!session?.access_token || !session?.refresh_token) throw new XedruoAuthError("invalid_session", "Xedruo did not return a valid company session.", 502);
     save({ access_token: session.access_token, refresh_token: session.refresh_token, expires_at: Date.now() + Number(session.expires_in || 900) * 1000 });
     storage.removeItem(verifierKey);
+    storage.removeItem(stateKey);
     window.history.replaceState({}, "", url.pathname);
     return { ...session, returnTo: safePath(storage.getItem(returnKey)) };
   }
@@ -109,11 +121,15 @@ export function createXedruoAuth({
     let session = read();
     if (!session?.access_token) throw new XedruoAuthError("unauthenticated", "Sign in required.", 401);
     if (session.expires_at && session.expires_at <= Date.now() + 30000) {
-      const rotated = await request("/refresh", { method: "POST", body: { refresh_token: session.refresh_token, company_slug: slug } });
-      session = { ...session, ...rotated, expires_at: Date.now() + Number(rotated.expires_in || 900) * 1000 };
+      const rotated = await request("/session/refresh", {
+        method: "POST",
+        body: { refreshToken: session.refresh_token },
+      });
+      if (!rotated.session?.access_token) throw new XedruoAuthError("invalid_session", "Xedruo could not refresh this session.", 401);
+      session = { ...session, ...rotated.session, expires_at: Date.now() + Number(rotated.session.expires_in || 900) * 1000 };
       save(session);
     }
-    return request("/session", { token: session.access_token });
+    return request("/session/validate", { method: "POST", token: session.access_token });
   }
 
   async function onboard({ countryCode, phoneE164, legalName }) {
@@ -122,17 +138,18 @@ export function createXedruoAuth({
     return request("/identity/onboarding", {
       method: "POST",
       token: session.access_token,
-      body: { country_code: countryCode, phone_e164: phoneE164, legal_name: legalName },
+      body: { countryCode, phoneE164, legalName },
     });
   }
 
   async function signOut() {
     const session = read();
     try {
-      if (session?.access_token) await request("/logout", { method: "POST", token: session.access_token });
+      if (session?.access_token) await request("/session/logout", { method: "POST", token: session.access_token });
     } finally {
       clear();
       storage.removeItem(verifierKey);
+      storage.removeItem(stateKey);
       storage.removeItem(returnKey);
     }
   }
