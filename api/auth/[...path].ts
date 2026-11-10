@@ -507,7 +507,10 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
       userId = account.rows[0].id;
       await db.query("INSERT INTO xedruo_profiles(id,full_name) VALUES($1,$2)", [userId, typeof claims.name === "string" ? claims.name : null]);
     }
-    if (!(await accountActive(userId))) throw new Error("account_inactive");
+    // Read through the active transaction: newly inserted accounts are not
+    // visible to a separate pool connection until this transaction commits.
+    const activeAccount = await db.query<{ status: string }>("SELECT status FROM xedruo_accounts WHERE id=$1", [userId]);
+    if (activeAccount.rows[0]?.status !== "active") throw new Error("account_inactive");
     await db.query(
       "INSERT INTO xedruo_oauth_identities(user_id,provider,provider_subject,email,email_verified) VALUES($1,'google',$2,$3,true) ON CONFLICT(provider,provider_subject) DO UPDATE SET email=EXCLUDED.email,email_verified=true",
       [userId, claims.sub, email],
