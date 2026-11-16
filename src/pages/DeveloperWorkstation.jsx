@@ -12,10 +12,11 @@ import DeploymentLog from "@/components/dev/DeploymentLog";
 
 // Future deployment / development workflow targets for each company application.
 const DEPLOY_TARGETS = [
-  { key: "github", label: "GitHub", desc: "Source control & CI", icon: GitBranch },
-  { key: "vercel", label: "Vercel", desc: "Frontend hosting", icon: Globe },
-  { key: "supabase", label: "Neon", desc: "Database & auth", icon: Server },
-  { key: "render", label: "Cloudflare R2", desc: "Backend services", icon: Rocket },
+  { key: "github", label: "GitHub", desc: "Repository access, branches, commits & pull requests", icon: GitBranch },
+  { key: "vercel", label: "Vercel", desc: "Preview builds, deployment checks & releases", icon: Globe },
+  { key: "neon", label: "Neon", desc: "Project registry and platform data", icon: Server },
+  { key: "cloudflare", label: "Cloudflare", desc: "DNS, CDN, security and R2 assets", icon: Rocket },
+  { key: "xedrion", label: "Xedrion AI", desc: "Shared AI chat, coding assistance and code review", icon: Cpu },
 ];
 
 export default function DeveloperWorkstation() {
@@ -147,9 +148,9 @@ export default function DeveloperWorkstation() {
             </div>
 
             <div className="rounded-2xl bg-card border border-border p-5">
-              <h3 className="font-display font-semibold mb-1">Development &amp; deployment workflows</h3>
+              <h3 className="font-display font-semibold mb-1">Platform integrations</h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Connect this company's application to external dev/deploy services. (Future ability — integrations are coming soon.)
+                Connect this project to the shared development stack. Xedrion AI will power the same builder in both the Xedruo Platform and every authorised company project.
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {DEPLOY_TARGETS.map((t) => {
@@ -162,7 +163,7 @@ export default function DeveloperWorkstation() {
                       <div className="text-sm font-medium">{t.label}</div>
                       <div className="text-[11px] text-muted-foreground mb-3">{t.desc}</div>
                       <Button size="sm" variant="outline" className="w-full" onClick={() => notifyComingSoon(t.label)}>
-                        Connect
+                        {t.key === "xedrion" ? "Enable AI plugin" : "Connect"}
                       </Button>
                     </div>
                   );
