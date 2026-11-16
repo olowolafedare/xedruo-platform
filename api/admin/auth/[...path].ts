@@ -169,7 +169,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         if (Number(count.rows[0]?.total || 0) === 0) {
           const created = await pool.query(
             "INSERT INTO public.xedruo_platform_admins(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,password_hash,role",
-            [email,bootstrapHash,bootstrapRole]
+            [identifier,bootstrapHash,bootstrapRole]
           );
           admin = created.rows[0];
           ok = Boolean(admin);
