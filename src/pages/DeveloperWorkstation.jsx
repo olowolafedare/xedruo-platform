@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import DeploymentLog from "@/components/dev/DeploymentLog";
+import XedrionStudio from "@/components/dev/XedrionStudio";
 
 // Future deployment / development workflow targets for each company application.
 const DEPLOY_TARGETS = [
