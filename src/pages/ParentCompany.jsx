@@ -10,17 +10,31 @@ import DeveloperArea from "@/components/parent/DeveloperArea";
 import CustomerServiceArea from "@/components/parent/CustomerServiceArea";
 import OperationsArea from "@/components/parent/OperationsArea";
 import AdminSecurity from "@/components/parent/AdminSecurity";
+import HRArea from "@/components/parent/HRArea";
 
 const AREAS = [
   { key: "governor", label: "Governor", icon: Shield, desc: "Oversee the Xedruo group." },
   { key: "ceo", label: "CEO", icon: Crown, desc: "Company management oversight." },
   { key: "cfo", label: "CFO", icon: DollarSign, desc: "Access company financial records." },
   { key: "developer", label: "Developer", icon: Cpu, desc: "Work on a company's application." },
+  { key: "technical_officer", label: "Technical Officer", icon: Cpu, desc: "Manage technical operations and developer access." },
+  { key: "hr", label: "Human Resources", icon: Activity, desc: "Create and manage staff accounts." },
   { key: "customer_service", label: "Customer Service", icon: Headphones, desc: "Serve a selected company's customers." },
   { key: "operations", label: "Operations", icon: Activity, desc: "Manage company operations." },
 ];
-const AREA_COMPONENT = { governor: GovernorArea, ceo: CEOArea, cfo: CFOArea, developer: DeveloperArea, customer_service: CustomerServiceArea, operations: OperationsArea };
+const AREA_COMPONENT = { governor: GovernorArea, ceo: CEOArea, cfo: CFOArea, hr: HRArea, developer: DeveloperArea, technical_officer: DeveloperArea, customer_service: CustomerServiceArea, operations: OperationsArea };
 const ROLE_LABEL = Object.fromEntries(AREAS.map((area) => [area.key, area.label]));
+
+
+function InitialStaffPasswordChange() {
+  const [password,setPassword]=useState("");
+  const [confirm,setConfirm]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const navigate=useNavigate();
+  const submit=async(e)=>{e.preventDefault();setError("");if(password!==confirm){setError("Passwords do not match.");return;}setBusy(true);try{const r=await fetch("/api/admin/staff/initial-password",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({newPassword:password})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Unable to update password.");navigate("/parent-company",{replace:true});window.location.reload();}catch(err){setError(err.message);}finally{setBusy(false);}};
+  return <main className="min-h-screen flex items-center justify-center bg-background px-4"><form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-border bg-card p-6 space-y-4"><h1 className="text-xl font-bold">Set your personal password</h1><p className="text-sm text-muted-foreground">Your HR-created initial password is temporary. Set a private password before entering the platform.</p><div className="space-y-1"><label className="text-sm">New password</label><input className="w-full h-10 rounded-md border bg-background px-3" type="password" minLength={12} value={password} onChange={e=>setPassword(e.target.value)} required /></div><div className="space-y-1"><label className="text-sm">Confirm password</label><input className="w-full h-10 rounded-md border bg-background px-3" type="password" minLength={12} value={confirm} onChange={e=>setConfirm(e.target.value)} required /></div>{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}<Button className="w-full" type="submit" disabled={busy||!password||!confirm}>{busy?"Updating…":"Set password and continue"}</Button></form></main>;
+}
 
 export default function ParentCompany() {
   const navigate = useNavigate();
@@ -49,6 +63,8 @@ export default function ParentCompany() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" /></div>;
   if (!user) return null;
 
+  if (user.must_change_password) return <InitialStaffPasswordChange />;
+
   if (!role) return <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4"><div className="max-w-md text-center"><div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4"><Lock className="w-7 h-7 text-destructive" /></div><h1 className="font-display font-bold text-xl mb-2">Internal area — access restricted</h1><p className="text-sm text-muted-foreground mb-5">This administrator account does not have a recognized platform role.</p><Button onClick={signOut} variant="outline">Sign out</Button></div></div>;
 
   const isGovernor = role === "governor";
@@ -56,11 +72,11 @@ export default function ParentCompany() {
   const AreaComp = currentArea ? AREA_COMPONENT[currentArea] : null;
 
   return <div className="min-h-screen bg-background text-foreground">
-    <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/80 border-b border-border"><div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3"><Link to="/management" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /> Management</Link><div className="w-px h-5 bg-border" /><div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center"><Building2 className="w-5 h-5 text-primary" /></div><div><div className="font-display font-bold leading-none">Xedruo Parent Company</div><div className="text-[11px] text-muted-foreground">{user.email} · Private administrator access</div></div><div className="ml-auto flex items-center gap-3"><div className="hidden sm:flex items-center gap-2 rounded-full bg-secondary/60 border border-border pl-2 pr-3 py-1"><Shield className="w-4 h-4 text-primary" /><span className="text-xs font-medium">{ROLE_LABEL[role]}</span></div><Button variant="outline" size="sm" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Sign out</Button></div></div></header>
+    <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/80 border-b border-border"><div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3"><Link to="/management" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /> Management</Link><div className="w-px h-5 bg-border" /><div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center"><Building2 className="w-5 h-5 text-primary" /></div><div><div className="font-display font-bold leading-none">Xedruo Parent Company</div><div className="text-[11px] text-muted-foreground">{user.username || user.email} · Private staff access</div></div><div className="ml-auto flex items-center gap-3"><div className="hidden sm:flex items-center gap-2 rounded-full bg-secondary/60 border border-border pl-2 pr-3 py-1"><Shield className="w-4 h-4 text-primary" /><span className="text-xs font-medium">{ROLE_LABEL[role]}</span></div><Button variant="outline" size="sm" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Sign out</Button></div></div></header>
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <AdminSecurity />
       {isGovernor && !currentArea && <div className="space-y-5"><div className="rounded-2xl p-5 bg-gradient-to-br from-primary/10 to-card border border-primary/20"><div className="flex items-center gap-3"><div className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center"><Shield className="w-5 h-5 text-primary" /></div><div><div className="font-display font-bold">Governor — Group Oversight</div><div className="text-xs text-muted-foreground">Full access to all six management work areas.</div></div></div></div><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{AREAS.map((a) => { const Icon = a.icon; return <button key={a.key} onClick={() => setActiveArea(a.key)} className="text-left rounded-2xl p-5 border bg-card border-border hover:border-primary/40 transition"><div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center mb-3"><Icon className="w-5 h-5 text-primary" /></div><h3 className="font-semibold">{a.label}</h3><p className="text-xs text-muted-foreground mt-1">{a.desc}</p><div className="mt-3 text-xs text-primary font-medium inline-flex items-center gap-1">Open <ArrowRight className="w-3.5 h-3.5" /></div></button>; })}</div></div>}
-      {AreaComp && <div className="space-y-4">{isGovernor && <button onClick={() => setActiveArea(null)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /> All work areas</button>}<AreaComp /></div>}
+      {AreaComp && <div className="space-y-4">{isGovernor && <button onClick={() => setActiveArea(null)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" /> All work areas</button>}<AreaComp isGovernor={isGovernor} /></div>}
     </main>
   </div>;
 }
