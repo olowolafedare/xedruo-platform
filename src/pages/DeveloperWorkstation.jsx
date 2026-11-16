@@ -14,8 +14,8 @@ import DeploymentLog from "@/components/dev/DeploymentLog";
 const DEPLOY_TARGETS = [
   { key: "github", label: "GitHub", desc: "Source control & CI", icon: GitBranch },
   { key: "vercel", label: "Vercel", desc: "Frontend hosting", icon: Globe },
-  { key: "supabase", label: "Supabase", desc: "Database & auth", icon: Server },
-  { key: "render", label: "Render", desc: "Backend services", icon: Rocket },
+  { key: "supabase", label: "Neon", desc: "Database & auth", icon: Server },
+  { key: "render", label: "Cloudflare R2", desc: "Backend services", icon: Rocket },
 ];
 
 export default function DeveloperWorkstation() {
@@ -28,7 +28,8 @@ export default function DeveloperWorkstation() {
   }, []);
 
   // Music Distribution is existing and is never rebuilt — exclude it from the project grid.
-  const projects = companies.filter((c) => c.slug !== "music-distribution");
+  const projects = companies;
+  const platformProject = { slug: "xedruo-platform", name: "Xedruo Platform", desc: "Build and maintain the central platform and shared APIs.", num: "CORE", icon: "✦", color: "#8b5cf6", route: "/management", scope: "platform" };
 
   const notifyComingSoon = (label) =>
     toast({
@@ -49,7 +50,7 @@ export default function DeveloperWorkstation() {
           </div>
           <div>
             <div className="font-display font-bold leading-none">Xedruo Internal Development Center</div>
-            <div className="text-[11px] text-muted-foreground">Select a company · Work on its application</div>
+            <div className="text-[11px] text-muted-foreground">Build the platform and every independent company application</div>
           </div>
         </div>
       </header>
@@ -60,7 +61,7 @@ export default function DeveloperWorkstation() {
             <ShieldCheck className="w-4 h-4 text-primary" /> Authorized developer
           </div>
           <p className="text-sm">
-            Select a Xedruo company to work on its standalone application. Each company is an
+            Select Xedruo Platform or a company project. Use the same AI-native Developer Studio to build both. Each company remains an
             <span className="font-medium text-foreground"> independent, domain-ready project</span> —
             manage and deploy them without merging their customer applications.
           </p>
@@ -68,7 +69,7 @@ export default function DeveloperWorkstation() {
 
         {!selected ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((c) => (
+            {[platformProject, ...projects].map((c) => (
               <button
                 key={c.slug}
                 onClick={() => setSelected(c)}
@@ -90,13 +91,13 @@ export default function DeveloperWorkstation() {
                         {c.icon}
                       </div>
                     </div>
-                    <span className="text-[10px] uppercase tracking-wide text-emerald-400 font-medium">Standalone</span>
+                    <span className="text-[10px] uppercase tracking-wide text-emerald-400 font-medium">{c.scope === "platform" ? "Control plane" : "Standalone company"}</span>
                   </div>
                   <h3 className="font-semibold">{c.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.desc}</p>
                 </div>
                 <div className="px-5 py-3 border-t border-border text-xs text-primary font-medium inline-flex items-center gap-1">
-                  Select &amp; work <ArrowRight className="w-3.5 h-3.5" />
+                  Select project <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </button>
             ))}
