@@ -43,19 +43,29 @@ export default function CustomerAuth() {
     if (callback.protocol !== 'https:') throw new Error('The company return address is invalid.');
   }
 
-  function startGoogle(registration) {
-    validateContext();
-    const url = new URL(API + '/google/start', window.location.origin);
-    url.searchParams.set('companySlug', companySlug);
-    url.searchParams.set('callbackUrl', callbackUrl);
-    url.searchParams.set('state', state);
-    url.searchParams.set('codeChallenge', codeChallenge);
-    if (registration) {
-      url.searchParams.set('countryCode', country);
-      url.searchParams.set('phoneE164', phoneE164);
-      url.searchParams.set('legalName', legalName.trim());
+  async function startGoogle(registration) {
+    try {
+      validateContext();
+      const payload = { companySlug, callbackUrl, state, codeChallenge };
+      if (registration) {
+        payload.countryCode = country;
+        payload.phoneE164 = phoneE164;
+        payload.legalName = legalName.trim();
+      }
+      const response = await fetch(API + '/google/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not start Google sign-in.');
+      if (!data.authorization_url) throw new Error('Xedruo did not return a Google sign-in address.');
+      window.location.assign(data.authorization_url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not start Google sign-in.');
+      setBusy(false);
     }
-    window.location.assign(url.toString());
   }
 
   async function emailLogin(event) {
