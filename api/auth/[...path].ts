@@ -282,6 +282,60 @@ async function postHandler(req: Request, path: string) {
   const company = verified.company;
   let response: Response;
 
+  if (path === "google/start") {
+    // The customer-auth page sends POST /google/start and expects a JSON
+    // authorization_url. Keep the same PKCE/state and callback validation as
+    // the legacy GET entry point, but return the URL instead of a redirect.
+    const callbackUrl = String(body.callbackUrl || "");
+    const state = String(body.state || "");
+    const challenge = String(body.codeChallenge || "");
+    const countryCode = String(body.countryCode || "").trim().toUpperCase();
+    const phoneE164 = String(body.phoneE164 || "").trim();
+    const legalName = String(body.legalName || "").trim().replace(/\\s+/g, " ");
+    const hasRegistration = Boolean(countryCode || phoneE164 || legalName);
+    if (!company.allowed_callbacks.includes(callbackUrl) ||
+        originOf(callbackUrl) !== originOf(company.app_origin) ||
+        !state || state.length > 256 ||
+        !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
+      return withCors(fail("invalid_oauth_request", "Company, callback URL, state or PKCE challenge is invalid.", 400), verified.origin);
+    }
+    let registration: { countryCode: string; phoneE164: string; legalName: string } | null = null;
+    if (hasRegistration) {
+      if (!/^[A-Z]{2}$/.test(countryCode) ||
+          !/^\\+[1-9][0-9]{7,14}$/.test(phoneE164) ||
+          legalName.length < 3 || legalName.length > 160) {
+        return withCors(fail("invalid_registration", "Select a country and enter a valid phone number and full legal name.", 400), verified.origin);
+      }
+      const country = await pool.query<{ calling_code: string }>(
+        "SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode],
+      );
+      if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) {
+        return withCors(fail("country_phone_mismatch", "The phone calling code does not match the selected country.", 400), verified.origin);
+      }
+      registration = { countryCode, phoneE164, legalName };
+    }
+    const googleState = randomToken(32);
+    const nonce = randomToken(32);
+    const statePart = Buffer.from(state, "utf8").toString("base64url");
+    const registrationPart = registration ? "." + Buffer.from(JSON.stringify(registration), "utf8").toString("base64url") : "";
+    const combined = googleState + "." + statePart + registrationPart;
+    await pool.query(
+      "INSERT INTO xedruo_oauth_transactions(state_hash,nonce_hash,pkce_challenge,company_slug,callback_url,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')",
+      [sha(googleState), sha(nonce), challenge, company.company_slug, callbackUrl],
+    );
+    const google = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    google.search = new URLSearchParams({
+      client_id: googleClientId,
+      redirect_uri: googleRedirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      state: combined,
+      nonce,
+      prompt: "select_account",
+    }).toString();
+    return withCors(reply({ authorization_url: google.toString() }), verified.origin);
+  }
+
   if (path === "google/complete") return withCors(await googleCallback(req, body, company), verified.origin);
 
   if (path === "id/login") {
