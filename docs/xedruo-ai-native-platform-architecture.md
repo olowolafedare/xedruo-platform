@@ -123,3 +123,27 @@ The platform itself must use the same AI-assisted build lifecycle, with protecte
 
 ### Enablement gate
 The Developer Workstation cards are discovery placeholders until the secure Xedruo gateway, Xedrion origin/configuration, GitHub App credentials and end-to-end tests are complete. Do not label either integration connected before those checks pass.
+
+## Xedrion Developer Studio: first live integration slice
+
+The platform now has a server-side Xedrion AI gateway at `POST /api/dev/xedrion` and a Developer Studio chat component. The gateway:
+- authenticates the platform staff session using the existing HttpOnly admin session cookie;
+- permits only developer, technical officer and governor roles, and blocks staff who must still change their initial password;
+- validates the selected project against the platform control-plane scope or enabled company registry;
+- forwards code requests using Xedrion's existing `POST /api/search` endpoint with `responseMode: "code"`;
+- keeps the Xedrion service origin server-side (`XEDRION_API_ORIGIN`, defaulting to the known production origin);
+- limits request size and conversation history, applies a timeout, and does not expose provider credentials.
+
+This is an AI assistance connection, not yet an autonomous coding/deployment agent. The following remain separate implementation milestones and must not be represented as live until built and tested:
+1. GitHub App installation, scoped repo selection, branch creation, diff write, pull request and revocation.
+2. Vercel project linking, preview deployment, build log inspection and production promotion approval.
+3. Cloudflare API token with zone/account scoping for DNS, cache, WAF and Workers/R2 tasks.
+4. Render and Hostinger provider-specific OAuth/API token adapters and deployment health checks.
+5. GPU server agent runner with isolated ephemeral containers, quotas, network egress controls, secrets injection, command allowlists and kill switch.
+6. Durable job orchestration, audit events, rollback, smoke tests and production health verification.
+
+### Universal integration contract
+
+Each provider adapter must expose capability discovery, connection health, least-privilege scopes, dry-run/plan, execute, verify, audit and revoke operations. Credentials are stored only server-side. High-impact actions (production deploys, DNS changes, database migrations, destructive operations, billing and secrets) require a human approval checkpoint. Build/test commands may run automatically only inside an isolated project runner with time, memory, CPU, disk and outbound-network limits.
+
+"Any app" means an extensible adapter framework plus provider APIs/MCP connectors, not unrestricted access to every service. Providers without a public API or supported automation interface require a custom adapter or human-assisted workflow.
