@@ -14,8 +14,8 @@ const request = async (path, options = {}) => {
 };
 
 export const platformAdminAuth = {
-  async login(email, password) {
-    return request("login", { method: "POST", body: JSON.stringify({ email, password }) });
+  async login(identifier, password) {
+    return request("login", { method: "POST", body: JSON.stringify({ identifier, password }) });
   },
   async me() {
     const data = await request("me", { method: "GET" });
