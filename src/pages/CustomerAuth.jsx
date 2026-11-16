@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { COUNTRIES } from '@/data/countries';
 
-const API = '/api/auth';
+const API = 'https://xedruo-platform.vercel.app/api/auth';
 const digits = (value) => String(value || '').replace(/\D/g, '');
 
 export default function CustomerAuth() {
