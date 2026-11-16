@@ -331,12 +331,27 @@ async function postHandler(req: Request, path: string) {
     const callbackUrl = String(body.callbackUrl || "");
     const state = String(body.state || "");
     const challenge = String(body.codeChallenge || "");
+    const countryCode = String(body.countryCode || "").trim().toUpperCase();
+    const phoneE164 = String(body.phoneE164 || "").trim();
+    const legalName = String(body.legalName || "").trim().replace(/\\s+/g, " ");
+    const hasRegistration = Boolean(countryCode || phoneE164 || legalName);
     if (!company.allowed_callbacks.includes(callbackUrl) || !state || state.length > 256 || !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
       return withCors(fail("invalid_oauth_request", "Callback URL, state or PKCE challenge is invalid.", 400), verified.origin);
     }
+    let registrationPart = "";
+    if (hasRegistration) {
+      if (!/^[A-Z]{2}$/.test(countryCode) || !/^\\+[1-9][0-9]{7,14}$/.test(phoneE164) || legalName.length < 3 || legalName.length > 160) {
+        return withCors(fail("invalid_registration", "Select a country and enter a valid phone number and full legal name.", 400), verified.origin);
+      }
+      const country = await pool.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
+      if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) {
+        return withCors(fail("country_phone_mismatch", "The phone calling code does not match the selected country.", 400), verified.origin);
+      }
+      registrationPart = "." + Buffer.from(JSON.stringify({ countryCode, phoneE164, legalName }), "utf8").toString("base64url");
+    }
     const googleState = randomToken(32);
     const nonce = randomToken(32);
-    const combined = googleState + "." + Buffer.from(state, "utf8").toString("base64url");
+    const combined = googleState + "." + Buffer.from(state, "utf8").toString("base64url") + registrationPart;
     await pool.query(
       "INSERT INTO xedruo_oauth_transactions(state_hash,nonce_hash,pkce_challenge,company_slug,callback_url,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '10 minutes')",
       [sha(googleState), sha(nonce), challenge, company.company_slug, callbackUrl],
