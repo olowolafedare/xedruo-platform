@@ -147,3 +147,22 @@ This is an AI assistance connection, not yet an autonomous coding/deployment age
 Each provider adapter must expose capability discovery, connection health, least-privilege scopes, dry-run/plan, execute, verify, audit and revoke operations. Credentials are stored only server-side. High-impact actions (production deploys, DNS changes, database migrations, destructive operations, billing and secrets) require a human approval checkpoint. Build/test commands may run automatically only inside an isolated project runner with time, memory, CPU, disk and outbound-network limits.
 
 "Any app" means an extensible adapter framework plus provider APIs/MCP connectors, not unrestricted access to every service. Providers without a public API or supported automation interface require a custom adapter or human-assisted workflow.
+
+### Initial official MCP provider endpoints
+
+These are provider-owned endpoints/docs identified for the adapter rollout. Listing them does not mean they are already authenticated or enabled in Xedruo:
+- **Cloudflare:** `https://mcp.cloudflare.com/mcp` — official remote MCP; OAuth or scoped Cloudflare API token. Covers DNS, Workers, R2 and wider Cloudflare API operations.
+- **Vercel:** `https://mcp.vercel.com` — official remote MCP with OAuth. Vercel documents a reviewed-client allowlist, so Xedrion must complete client compatibility/approval before assuming production access.
+- **Render:** `https://mcp.render.com/mcp` — official remote MCP with OAuth or API-key authentication; workspace selection and destructive-action approvals are important.
+- **Hostinger:** `https://mcp.hostinger.com` — official remote MCP with OAuth; Hostinger also documents an API-token-based MCP server.
+- **GitHub:** `https://api.githubcopilot.com/mcp/` — official remote MCP with OAuth or a fine-grained PAT. A GitHub App with repository-scoped permissions remains the preferred production identity for Xedruo automation.
+
+Provider documentation:
+- Cloudflare: https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/
+- Vercel: https://vercel.com/docs/agent-resources/vercel-mcp
+- Render: https://render.com/docs/mcp-server
+- Hostinger: https://support.hostinger.com/en/articles/11079316-hostinger-api-mcp-server
+- GitHub: https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/customize-copilot/extend-copilot-with-tools-and-context/set-up-the-github-mcp-server
+
+### GPU execution
+A GPU server is not just another MCP API. Xedruo needs a separate ephemeral runner service that provisions an isolated container/VM with pinned images, per-job credentials, quotas, restricted egress, artifact capture, cancellation and automatic teardown. The runner should accept an explicit task plan from Xedrion, execute only within a project workspace, and return structured logs/test artifacts. Do not give the model a permanent unrestricted SSH shell or root credentials.
