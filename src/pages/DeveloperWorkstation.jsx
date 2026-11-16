@@ -16,7 +16,10 @@ const DEPLOY_TARGETS = [
   { key: "github", label: "GitHub", desc: "Repository access, branches, commits & pull requests", icon: GitBranch },
   { key: "vercel", label: "Vercel", desc: "Preview builds, deployment checks & releases", icon: Globe },
   { key: "neon", label: "Neon", desc: "Project registry and platform data", icon: Server },
-  { key: "cloudflare", label: "Cloudflare", desc: "DNS, CDN, security and R2 assets", icon: Rocket },
+  { key: "cloudflare", label: "Cloudflare", desc: "DNS, CDN, Workers, security and R2 assets", icon: Rocket },
+  { key: "render", label: "Render", desc: "Services, deploys, logs, metrics and databases", icon: Server },
+  { key: "hostinger", label: "Hostinger", desc: "Websites, VPS, domains and DNS", icon: Globe },
+  { key: "gpu", label: "GPU Server", desc: "Isolated build, test and inference runners", icon: Cpu },
   { key: "xedrion", label: "Xedrion AI", desc: "Shared AI chat, coding assistance and code review", icon: Cpu },
 ];
 
@@ -153,7 +156,7 @@ export default function DeveloperWorkstation() {
               <p className="text-xs text-muted-foreground mb-4">
                 Connect this project to the shared development stack. Xedrion AI will power the same builder in both the Xedruo Platform and every authorised company project.
               </p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {DEPLOY_TARGETS.map((t) => {
                   const Icon = t.icon;
                   return (
