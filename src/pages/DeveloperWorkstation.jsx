@@ -163,9 +163,15 @@ export default function DeveloperWorkstation() {
                       </div>
                       <div className="text-sm font-medium">{t.label}</div>
                       <div className="text-[11px] text-muted-foreground mb-3">{t.desc}</div>
-                      <Button size="sm" variant="outline" className="w-full" onClick={() => notifyComingSoon(t.label)}>
-                        {t.key === "xedrion" ? "Enable AI plugin" : "Connect"}
-                      </Button>
+                      {t.key === "xedrion" ? (
+                        <Button size="sm" variant="outline" className="w-full" disabled>
+                          Available in this workspace
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => notifyComingSoon(t.label)}>
+                          Connect
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
