@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Mail, Lock, Loader2, AlertTriangle } from "lucide-react";
+import { Shield, UserRound, Lock, Loader2, AlertTriangle } from "lucide-react";
 import { platformAdminAuth } from "@/lib/platformAdminAuth";
 
 export default function ParentLogin() {
@@ -47,8 +47,8 @@ export default function ParentLogin() {
           {error && <div role="alert" className="mb-5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 p-3 text-sm">{error}</div>}
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="parent-email" className="text-slate-200">Administrator email</Label>
-              <div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><Input id="parent-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="administrator email" className="pl-10 h-12 bg-slate-950 border-slate-700 text-white" required /></div>
+              <Label htmlFor="parent-email" className="text-slate-200">Username or email</Label>
+              <div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><Input id="parent-email" type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your staff username" className="pl-10 h-12 bg-slate-950 border-slate-700 text-white" required /></div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="parent-password" className="text-slate-200">Password</Label>
