@@ -72,8 +72,11 @@ async function verifiedCompany(req: Request, slug: string) {
   const origin = originOf(req.headers.get("origin"));
   const company = await getCompany(slug);
   // Platform-hosted customer auth may call the gateway for a registered company.
-  const platformOrigin = originOf(issuer);
-  if (!origin || !company || (originOf(company.app_origin) !== origin && platformOrigin !== origin)) return null;
+  // The customer authentication UI is served by the platform's Vercel deployment,
+  // while xedruo.com remains the canonical issuer and Google callback domain.
+  const platformOrigin = originOf(process.env.AUTH_APP_ORIGIN || "https://xedruo-platform.vercel.app");
+  const issuerOrigin = originOf(issuer);
+  if (!origin || !company || (originOf(company.app_origin) !== origin && issuerOrigin !== origin && platformOrigin !== origin)) return null;
   return { company, origin };
 }
 async function audit(event: string, userId: string | null, company: string | null, details: Record<string, unknown> = {}) {
@@ -583,7 +586,7 @@ async function centralGoogleCallback(req: Request): Promise<Response> {
   const issued = await pool.query<{ user_id: string }>("SELECT user_id FROM xedruo_auth_codes WHERE code_hash=$1 AND company_slug=$2 AND callback_url=$3", [sha(payload.code), row.company_slug, row.callback_url]);
   const identity = issued.rows[0] ? await identityFor(issued.rows[0].user_id) : null;
   if (!identity?.xedruo_id || !identity.phone_e164 || !identity.legal_name?.trim()) {
-    const onboarding = new URL("/customer-auth", issuer);
+    const onboarding = new URL("/customer-auth", process.env.AUTH_APP_ORIGIN || "https://xedruo-platform.vercel.app");
     onboarding.searchParams.set("companySlug", row.company_slug);
     onboarding.searchParams.set("callbackUrl", row.callback_url);
     onboarding.searchParams.set("state", payload.state);
