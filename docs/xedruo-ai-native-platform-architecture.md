@@ -101,3 +101,25 @@ The platform itself must use the same AI-assisted build lifecycle, with protecte
 - Company credentials and data are isolated.
 - No browser bundle contains Xedrion API secrets.
 - No unsupported upstream Xedrion endpoint is assumed.
+
+## Verified Xedrion AI and GitHub integration requirements
+
+### Xedrion AI plugin
+- The Xedrion repository currently exposes its main answer-generation endpoint as `POST /api/search`.
+- The verified request fields include `query`, optional `responseMode` (including `code`), and optional `conversation`; the response includes `answer`.
+- The platform integration must use a server-side Xedruo gateway/proxy. Do not call Xedrion from browser code with provider credentials.
+- Before enabling the plugin, configure the production Xedrion API origin and verify the deployed origin, CORS/network policy, central Xedruo session validation, developer role and project-scope authorization.
+- The current Xedrion search handler does not itself establish the platform developer's project permissions. The Xedruo gateway must enforce those permissions before forwarding a request.
+- The plugin must pass the selected project scope (platform or company slug) as trusted server-side context, keep conversation history scoped to the active project, and record usage/audit metadata.
+- Code-generation output is a proposal only. It must be converted into a reviewable diff before any repository write.
+
+### GitHub application connection
+- Register a GitHub App for the Xedruo Developer Studio. Do not reuse the ChatGPT GitHub connector as runtime authentication for the Xedruo website.
+- Request only the required repository permissions: metadata read, contents read/write on explicitly installed repositories, and pull-request read/write if PR creation is enabled.
+- Installation/repository selection must be explicit and scoped to each staff member's assigned projects.
+- Store GitHub App private keys and installation tokens server-side; never return them to the browser or commit them to Git.
+- All writes must target a selected feature branch. Production branch protection and review rules remain in force.
+- GitHub connection is not complete until OAuth/App installation, token exchange, repository selection, branch read, a test-branch commit and revocation have passed.
+
+### Enablement gate
+The Developer Workstation cards are discovery placeholders until the secure Xedruo gateway, Xedrion origin/configuration, GitHub App credentials and end-to-end tests are complete. Do not label either integration connected before those checks pass.
