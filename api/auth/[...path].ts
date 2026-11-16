@@ -291,7 +291,7 @@ async function postHandler(req: Request, path: string) {
     const challenge = String(body.codeChallenge || "");
     const countryCode = String(body.countryCode || "").trim().toUpperCase();
     const phoneE164 = String(body.phoneE164 || "").trim();
-    const legalName = String(body.legalName || "").trim().replace(/\\s+/g, " ");
+    const legalName = String(body.legalName || "").trim().replace(/\s+/g, " ");
     const hasRegistration = Boolean(countryCode || phoneE164 || legalName);
     if (!company.allowed_callbacks.includes(callbackUrl) ||
         originOf(callbackUrl) !== originOf(company.app_origin) ||
@@ -302,7 +302,7 @@ async function postHandler(req: Request, path: string) {
     let registration: { countryCode: string; phoneE164: string; legalName: string } | null = null;
     if (hasRegistration) {
       if (!/^[A-Z]{2}$/.test(countryCode) ||
-          !/^\\+[1-9][0-9]{7,14}$/.test(phoneE164) ||
+          !/^\+[1-9][0-9]{7,14}$/.test(phoneE164) ||
           legalName.length < 3 || legalName.length > 160) {
         return withCors(fail("invalid_registration", "Select a country and enter a valid phone number and full legal name.", 400), verified.origin);
       }
@@ -387,14 +387,14 @@ async function postHandler(req: Request, path: string) {
     const challenge = String(body.codeChallenge || "");
     const countryCode = String(body.countryCode || "").trim().toUpperCase();
     const phoneE164 = String(body.phoneE164 || "").trim();
-    const legalName = String(body.legalName || "").trim().replace(/\\s+/g, " ");
+    const legalName = String(body.legalName || "").trim().replace(/\s+/g, " ");
     const hasRegistration = Boolean(countryCode || phoneE164 || legalName);
     if (!company.allowed_callbacks.includes(callbackUrl) || !state || state.length > 256 || !/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
       return withCors(fail("invalid_oauth_request", "Callback URL, state or PKCE challenge is invalid.", 400), verified.origin);
     }
     let registrationPart = "";
     if (hasRegistration) {
-      if (!/^[A-Z]{2}$/.test(countryCode) || !/^\\+[1-9][0-9]{7,14}$/.test(phoneE164) || legalName.length < 3 || legalName.length > 160) {
+      if (!/^[A-Z]{2}$/.test(countryCode) || !/^\+[1-9][0-9]{7,14}$/.test(phoneE164) || legalName.length < 3 || legalName.length > 160) {
         return withCors(fail("invalid_registration", "Select a country and enter a valid phone number and full legal name.", 400), verified.origin);
       }
       const country = await pool.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
