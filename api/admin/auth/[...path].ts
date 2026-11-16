@@ -44,7 +44,7 @@ async function getAdmin(req: IncomingMessage) {
   const token = readCookie(req);
   if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) return null;
   const result = await pool.query(
-    `SELECT a.id,a.email,a.role FROM public.xedruo_platform_admin_sessions s
+    `SELECT a.id,a.email,a.username,a.department,a.role,a.must_change_password FROM public.xedruo_platform_admin_sessions s
      JOIN public.xedruo_platform_admins a ON a.id=s.admin_id
      WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND a.status='active'
      LIMIT 1`,
@@ -130,13 +130,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
     if (path !== "login") return json(res,404,{error:"not_found"});
     const input = await body(req);
-    const email = String(input.email || "").trim().toLowerCase();
+    const identifier = String(input.identifier || input.email || "").trim().toLowerCase();
     const password = String(input.password || "");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 1 || password.length > 128) {
+    if (!/^(?:[^\s@]+@[^\s@]+\.[^\s@]+|[a-z0-9._-]{3,32})$/.test(identifier) || password.length < 1 || password.length > 128) {
       return json(res,401,{error:"invalid_credentials",message:"Email or password is incorrect."});
     }
     const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-    const emailHash = sha("admin-email:" + email);
+    const emailHash = sha("admin-identifier:" + identifier);
     const ipHash = sha("admin-ip:" + (forwarded || "unknown"));
     await pool.query(
       "INSERT INTO public.xedruo_platform_admin_login_attempts(email_hash,ip_hash) VALUES($1,$2)",
@@ -151,8 +151,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     );
     const blocked = Number(limits.rows[0]?.email_attempts || 0) > 5 || Number(limits.rows[0]?.ip_attempts || 0) > 20;
     const found = blocked ? { rows: [] as any[] } : await pool.query(
-      "SELECT id,email,password_hash,role FROM public.xedruo_platform_admins WHERE lower(email)=$1 AND status='active' LIMIT 1",
-      [email]
+      "SELECT id,email,username,password_hash,role,department,must_change_password FROM public.xedruo_platform_admins WHERE (lower(email)=$1 OR lower(username)=$1) AND status='active' LIMIT 1",
+      [identifier]
     );
     let admin = found.rows[0];
     let ok = admin ? await checkPassword(password,admin.password_hash) : false;
@@ -162,8 +162,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const bootstrapEmail = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_EMAIL || "").trim().toLowerCase();
       const bootstrapHash = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_PASSWORD_HASH || "");
       const bootstrapRole = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_ROLE || "ceo");
-      const allowedRoles = new Set(["governor","ceo","cfo","developer","customer_service","operations"]);
-      if (bootstrapEmail && bootstrapHash && email === bootstrapEmail && allowedRoles.has(bootstrapRole) &&
+      const allowedRoles = new Set(["governor","ceo","cfo","hr","developer","technical_officer","customer_service","operations"]);
+      if (bootstrapEmail && bootstrapHash && identifier === bootstrapEmail && allowedRoles.has(bootstrapRole) &&
           await checkPassword(password,bootstrapHash)) {
         const count = await pool.query("SELECT count(*)::int AS total FROM public.xedruo_platform_admins");
         if (Number(count.rows[0]?.total || 0) === 0) {
@@ -188,7 +188,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     await pool.query(
       "DELETE FROM public.xedruo_platform_admin_login_attempts WHERE attempted_at<now()-interval '1 day'"
     );
-    return json(res,200,{admin:{id:admin.id,email:admin.email,role:admin.role}},{ "set-cookie": setCookie(token) });
+    return json(res,200,{admin:{id:admin.id,email:admin.email,username:admin.username,department:admin.department,role:admin.role,must_change_password:Boolean(admin.must_change_password)}},{ "set-cookie": setCookie(token) });
   } catch (error) {
     console.error("platform_admin_auth_error", error);
     return json(res,500,{error:"server_error",message:"Platform administrator authentication failed."});
