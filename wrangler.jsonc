@@ -15,7 +15,9 @@
     "AUTH_ISSUER": "https://xedruo.com",
     "AUTH_APP_ORIGIN": "https://xedruo.com",
     "XEDRUO_GOOGLE_REDIRECT_URI": "https://xedruo.com/api/auth/google/callback"
-  }
-  // Add this only at cutover (see docs/cloudflare-migration.md):
-  // , "routes": [{ "pattern": "xedruo.com", "custom_domain": true }]
+  },
+  "routes": [
+    { "pattern": "xedruo.com", "custom_domain": true },
+    { "pattern": "www.xedruo.com", "custom_domain": true }
+  ]
 }
