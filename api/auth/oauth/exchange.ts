@@ -1,4 +1,2 @@
-// Explicit route for the nested OAuth exchange endpoint.
-// Reuse the central auth gateway handler so validation and session issuance
-// remain identical to the catch-all route.
-export { default } from "../[...path]";
+// Explicit OAuth exchange route using the shared central auth handler.
+export { default } from "../../../lib/xedruo-auth-handler";
