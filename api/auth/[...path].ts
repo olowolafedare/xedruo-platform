@@ -696,7 +696,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
     const requestUrl = new URL(req.url || "/api/auth", "https://" + (req.headers.host || "xedruo.com"));
     const webReq = new Request(requestUrl, { method, headers, ...(body ? { body, duplex: "half" } as RequestInit : {}) });
-    const path = requestUrl.pathname.replace(/^\/api\/auth\/?/, "");
+    // Vercel can expose either the full /api/auth prefix or a function-relative path.
+    // Normalize both forms so nested auth routes (especially oauth/exchange) dispatch consistently.
+    const path = requestUrl.pathname
+      .replace(/^\/api\/auth(?:\/|$)/, "")
+      .replace(/^\/+|\/+$/g, "");
+    console.info("xedruo_auth_request", { method, path });
     let response: Response;
     if (method === "OPTIONS") {
       // Preflight does not carry the company header. Reflect the requesting origin
