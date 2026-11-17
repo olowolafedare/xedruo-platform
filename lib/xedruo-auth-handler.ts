@@ -11,13 +11,14 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { requestPool } from "./workers-db.js";
 
 const required = (name: string) => {
   const value = process.env[name];
   if (!value) throw new Error("Missing environment variable: " + name);
   return value;
 };
-const pool = new Pool({ connectionString: required("DATABASE_URL"), max: 5 });
+const pool = requestPool(() => new Pool({ connectionString: required("DATABASE_URL"), max: 5 }));
 type QueryExecutor = { query<T = any>(text: string, values?: any[]): Promise<{ rows: T[]; rowCount?: number | null }> };
 type DbClient = QueryExecutor & { release(): void };
 async function connectDb(): Promise<DbClient> { return await pool.connect() as unknown as DbClient; }
@@ -668,6 +669,49 @@ async function centralGoogleCallback(req: Request): Promise<Response> {
   destination.searchParams.set("state", payload.state);
   return new Response(null, { status: 302, headers: { location: destination.toString(), "cache-control": "no-store" } });
 }
+/** Runtime-neutral entry: Web Request in, Web Response out (Cloudflare Workers and Vercel). */
+export async function handleAuthRequest(webReq: Request): Promise<Response> {
+  const method = webReq.method.toUpperCase();
+  const requestUrl = new URL(webReq.url);
+  // Normalize both the full /api/auth prefix and a function-relative path.
+  const path = requestUrl.pathname
+    .replace(/^\/api\/auth(?:\/|$)/, "")
+    .replace(/^\/+|\/+$/g, "");
+  console.info("xedruo_auth_request", { method, path });
+  try {
+    let response: Response;
+    if (method === "OPTIONS") {
+      // Preflight does not carry the company header. Reflect the requesting origin
+      // here; the actual GET/POST handler still enforces the registered company
+      // slug, app origin and callback allowlist before performing any operation.
+      const origin = originOf(webReq.headers.get("origin"));
+      response = new Response(null, { status: 204, headers: origin ? cors(origin) : {} });
+    } else if (method === "GET" && path === "google/callback") response = await centralGoogleCallback(webReq);
+    else if (method === "GET") response = await getHandler(webReq, path);
+    else if (method === "POST") response = await postHandler(webReq, path);
+    else response = fail("method_not_allowed", "Method not allowed.", 405);
+
+    // Ensure registered company origins can read structured error responses too.
+    // Authorization is still enforced by verifiedCompany() in each route.
+    const requestOrigin = originOf(webReq.headers.get("origin"));
+    if (requestOrigin && method !== "OPTIONS") {
+      const registered = await pool.query<{ app_origin: string }>(
+        "SELECT app_origin FROM xedruo_company_app_registry WHERE enabled=true AND app_origin=$1 LIMIT 1",
+        [requestOrigin],
+      );
+      if (registered.rows.length) response = withCors(response, requestOrigin);
+    }
+    return response;
+  } catch (e) {
+    console.error("xedruo_auth_function_error", e);
+    const origin = originOf(webReq.headers.get("origin"));
+    return new Response(JSON.stringify({ error: "server_error", message: "Authentication service error." }), {
+      status: 500,
+      headers: { ...(origin ? cors(origin) : {}), "content-type": "application/json; charset=utf-8" },
+    });
+  }
+}
+
 /** Vercel Node.js serverless adapter. */
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
@@ -696,45 +740,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
     const requestUrl = new URL(req.url || "/api/auth", "https://" + (req.headers.host || "xedruo.com"));
     const webReq = new Request(requestUrl, { method, headers, ...(body ? { body, duplex: "half" } as RequestInit : {}) });
-    // Vercel can expose either the full /api/auth prefix or a function-relative path.
-    // Normalize both forms so nested auth routes (especially oauth/exchange) dispatch consistently.
-    const path = requestUrl.pathname
-      .replace(/^\/api\/auth(?:\/|$)/, "")
-      .replace(/^\/+|\/+$/g, "");
-    console.info("xedruo_auth_request", { method, path });
-    let response: Response;
-    if (method === "OPTIONS") {
-      // Preflight does not carry the company header. Reflect the requesting origin
-      // here; the actual GET/POST handler still enforces the registered company
-      // slug, app origin and callback allowlist before performing any operation.
-      const origin = originOf(webReq.headers.get("origin"));
-      response = new Response(null, { status: 204, headers: origin ? cors(origin) : {} });
-    } else if (method === "GET" && path === "google/callback") response = await centralGoogleCallback(webReq);
-    else if (method === "GET") response = await getHandler(webReq, path);
-    else if (method === "POST") response = await postHandler(webReq, path);
-    else response = fail("method_not_allowed", "Method not allowed.", 405);
-
-    // Ensure registered company origins can read structured error responses too.
-    // Authorization is still enforced by verifiedCompany() in each route.
-    const requestOrigin = originOf(webReq.headers.get("origin"));
-    if (requestOrigin && method !== "OPTIONS") {
-      const registered = await pool.query<{ app_origin: string }>(
-        "SELECT app_origin FROM xedruo_company_app_registry WHERE enabled=true AND app_origin=$1 LIMIT 1",
-        [requestOrigin],
-      );
-      if (registered.rows.length) response = withCors(response, requestOrigin);
-    }
+    const response = await handleAuthRequest(webReq);
     res.statusCode = response.status;
     response.headers.forEach((v, k) => res.setHeader(k, v));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch (e) {
     console.error("xedruo_auth_function_error", e);
     if (!res.headersSent) {
-      const origin = originOf(typeof req.headers.origin === "string" ? req.headers.origin : null);
       res.statusCode = 500;
-      if (origin) {
-        for (const [key, value] of Object.entries(cors(origin))) res.setHeader(key, value);
-      }
       res.setHeader("content-type", "application/json; charset=utf-8");
       res.end(JSON.stringify({ error: "server_error", message: "Authentication service error." }));
     } else res.end();

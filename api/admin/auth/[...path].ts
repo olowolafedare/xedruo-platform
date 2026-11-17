@@ -2,8 +2,9 @@ import { Pool } from "@neondatabase/serverless";
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { requestPool } from "../../../lib/workers-db.js";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || "", max: 3 });
+const pool = requestPool(() => new Pool({ connectionString: process.env.DATABASE_URL || "", max: 3 }));
 const scrypt = promisify(scryptCallback);
 const COOKIE = "xedruo_platform_admin";
 const SESSION_HOURS = 8;
