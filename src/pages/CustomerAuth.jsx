@@ -3,6 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { COUNTRIES } from '@/data/countries';
 
 const API = '/api/auth'; // same-origin: the page is served from xedruo.com, alongside the Worker API
+const REDIRECT_ERRORS = {
+  email_already_registered: 'This email is already registered. Log in instead.',
+  phone_already_registered: 'This phone number is already registered. Log in instead, or use a different number.',
+};
 const digits = (value) => String(value || '').replace(/\D/g, '');
 
 export default function CustomerAuth() {
@@ -20,7 +24,7 @@ export default function CustomerAuth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(REDIRECT_ERRORS[params.get('error')] || '');
 
   useEffect(() => {
     let active = true;

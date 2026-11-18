@@ -75,7 +75,7 @@ async function verifiedCompany(req: Request, slug: string) {
   // Platform-hosted customer auth may call the gateway for a registered company.
   // The customer authentication UI is served by the platform's Vercel deployment,
   // while xedruo.com remains the canonical issuer and Google callback domain.
-  const platformOrigin = originOf(process.env.AUTH_APP_ORIGIN || "https://xedruo-platform.vercel.app");
+  const platformOrigin = originOf(process.env.AUTH_APP_ORIGIN || "https://xedruo.com");
   const issuerOrigin = originOf(issuer);
   if (!origin || !company || (originOf(company.app_origin) !== origin && issuerOrigin !== origin && platformOrigin !== origin)) return null;
   return { company, origin };
@@ -233,6 +233,10 @@ async function getHandler(req: Request, path: string) {
       const country = await pool.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
       if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) {
         return fail("country_phone_mismatch", "The phone calling code does not match the selected country.", 400);
+      }
+      const phoneTaken = await pool.query("SELECT 1 FROM xedruo_identity WHERE phone_e164=$1 LIMIT 1", [phoneE164]);
+      if (phoneTaken.rows[0]) {
+        return withCors(fail("phone_already_registered", "This phone number is already registered. Log in instead, or use a different number.", 409), verified.origin);
       }
       registration = { countryCode, phoneE164, legalName };
     }
@@ -614,11 +618,16 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
       const country = await db.query<{ calling_code: string }>("SELECT calling_code FROM xedruo_country_calling_codes WHERE country_code=$1", [countryCode]);
       if (!country.rows[0] || !phoneE164.startsWith(country.rows[0].calling_code)) throw new Error("country_phone_mismatch");
       const existingIdentity = await db.query<{ user_id: string }>("SELECT user_id FROM xedruo_identity WHERE user_id=$1 FOR UPDATE", [userId]);
-      if (!existingIdentity.rows[0]) {
-        const xedruoId = await makeId(db, countryCode);
+      // Someone registering with a Google account that already has a full Xedruo ID.
+      if (existingIdentity.rows[0]) throw new Error("email_already_registered");
+      const xedruoId = await makeId(db, countryCode);
+      try {
         await db.query("INSERT INTO xedruo_identity(user_id,xedruo_id,country_code,legal_name,phone_e164) VALUES($1,$2,$3,$4,$5)", [userId, xedruoId, countryCode, legalName, phoneE164]);
-        await db.query("INSERT INTO xedruo_profiles(id,full_name) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET full_name=EXCLUDED.full_name,updated_at=now()", [userId, legalName]);
+      } catch (insertError) {
+        if ((insertError as { code?: string }).code === "23505") throw new Error("phone_already_registered");
+        throw insertError;
       }
+      await db.query("INSERT INTO xedruo_profiles(id,full_name) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET full_name=EXCLUDED.full_name,updated_at=now()", [userId, legalName]);
     }
     const authCode = randomToken(32);
     await db.query(
@@ -631,6 +640,9 @@ async function googleCallback(req: Request, body: Record<string, unknown>, compa
     return reply({ code: authCode, state: Buffer.from(parts[1], "base64url").toString("utf8"), callbackUrl });
   } catch (e) {
     await db.query("ROLLBACK").catch(() => undefined);
+    const failureMessage = e instanceof Error ? e.message : "";
+    if (failureMessage === "email_already_registered") return fail("email_already_registered", "This email is already registered. Log in instead.", 409);
+    if (failureMessage === "phone_already_registered") return fail("phone_already_registered", "This phone number is already registered. Log in instead, or use a different number.", 409);
     console.error("xedruo_google_callback_failed", e);
     return fail("google_oauth_failed", "Google sign-in could not be completed. Please try again.", 401);
   } finally { db.release(); }
@@ -650,13 +662,27 @@ async function centralGoogleCallback(req: Request): Promise<Response> {
   const company = found.rows[0];
   if (!company || !company.allowed_callbacks.includes(row.callback_url)) return fail("oauth_callback_not_registered", "The company callback is not registered.", 403);
   const completed = await googleCallback(req, { code, state, callbackUrl: row.callback_url }, company);
-  if (!completed.ok) return completed;
+  if (!completed.ok) {
+    const failure = await completed.clone().json().catch(() => null) as { error?: string } | null;
+    if (failure?.error === "email_already_registered" || failure?.error === "phone_already_registered") {
+      // Send the person back to the Xedruo page with a clear message and a fresh start.
+      const back = new URL("/customer-auth", process.env.AUTH_APP_ORIGIN || "https://xedruo.com");
+      back.searchParams.set("companySlug", row.company_slug);
+      back.searchParams.set("callbackUrl", row.callback_url);
+      back.searchParams.set("state", Buffer.from(parts[1], "base64url").toString("utf8"));
+      back.searchParams.set("codeChallenge", row.pkce_challenge);
+      back.searchParams.set("mode", failure.error === "phone_already_registered" ? "register" : "login");
+      back.searchParams.set("error", failure.error);
+      return new Response(null, { status: 302, headers: { location: back.toString(), "cache-control": "no-store" } });
+    }
+    return completed;
+  }
   const payload = await completed.json() as {code?:string;state?:string;callbackUrl?:string};
   if (!payload.code || payload.state === undefined || payload.callbackUrl !== row.callback_url) return fail("google_oauth_failed", "The sign-in response could not be completed.", 401);
   const issued = await pool.query<{ user_id: string }>("SELECT user_id FROM xedruo_auth_codes WHERE code_hash=$1 AND company_slug=$2 AND callback_url=$3", [sha(payload.code), row.company_slug, row.callback_url]);
   const identity = issued.rows[0] ? await identityFor(issued.rows[0].user_id) : null;
   if (!identity?.xedruo_id || !identity.phone_e164 || !identity.legal_name?.trim()) {
-    const onboarding = new URL("/customer-auth", process.env.AUTH_APP_ORIGIN || "https://xedruo-platform.vercel.app");
+    const onboarding = new URL("/customer-auth", process.env.AUTH_APP_ORIGIN || "https://xedruo.com");
     onboarding.searchParams.set("companySlug", row.company_slug);
     onboarding.searchParams.set("callbackUrl", row.callback_url);
     onboarding.searchParams.set("state", payload.state);
