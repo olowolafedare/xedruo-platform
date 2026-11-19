@@ -82,10 +82,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const reason = String(input.reason || "").trim();
       const sponsorEmail = String(input.sponsorEmail || "").trim().toLowerCase() || null;
       const units = new Set(["chairman","ceo","cfo","cos","operations","customer_service","cto"]);
-      if (fullName.length < 2 || fullName.length > 160 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(workEmail) ||
+      if (fullName.length < 2 || fullName.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail) ||
           !units.has(requestedUnit) || positionTitle.length < 2 || positionTitle.length > 120 ||
           reason.length < 10 || reason.length > 2000 ||
-          (sponsorEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(sponsorEmail))) {
+          (sponsorEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail))) {
         return json(res,400,{error:"invalid_request",message:"Complete all required fields with valid details."});
       }
       const recent = await pool.query(
