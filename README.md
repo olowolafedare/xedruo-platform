@@ -1,26 +1,24 @@
-# Using the Xedruo Platform
+# Xedruo Platform
 
-Use the platform to access the tools and information available to your account.
+Xedruo Platform is the control plane and intended full Backend-as-a-Service (BaaS) provider for independent Xedruo companies. It exposes shared services through versioned APIs; company apps retain their own customer experience and dashboards.
+
+## Architecture decision
+- Database foundation: Neon PostgreSQL.
+- Platform scope: full Xedruo-owned BaaS: identity/authentication, company/project registry, database services, protected data APIs, storage, realtime/events, functions/jobs, developer tools, usage, monitoring, support and audit.
+- Supabase is not the target backend. Remaining Supabase SDK and runtime paths are legacy migration work; do not remove them until replacements pass production tests.
+- Neon is the database foundation, not the whole BaaS product. Xedruo owns the API gateway, control plane, tenant isolation, policies and developer experience.
+- Independent companies authenticate through Xedruo APIs and return to their own registered callback/dashboard. The platform is not a customer login redirect.
+
+See [Full Neon BaaS Architecture](docs/full-neon-baas-architecture.md) for the decision record, read-only infrastructure audit and migration plan.
 
 ## Getting started
-
-1. Open the platform using the link provided by your organization.
-2. Sign in with your account credentials. Contact your administrator if you need access.
-3. Use the navigation menu to find the section for your task.
-
-## Using the platform
-
-- Follow the on-screen instructions to view or update information.
-- Use search and filters, when available, to find items.
-- Save or submit your work when prompted, and check for a confirmation.
-- Sign out when using a shared device.
-
-Available features depend on your account permissions and your organization’s configuration. For help, contact your administrator or support team.
-
+1. Open the relevant company application.
+2. Sign in through that company's own login experience.
+3. Use the navigation menu for your task.
+4. Sign out when using a shared device.
 
 ## Xedruo deployment ownership map
-
-The holding platform and operating products are deployed independently. The GitHub repository is the source of truth; the matching Vercel project is the production deployment target.
+The holding platform and operating products are deployed independently. GitHub is the source of truth; the matching Vercel project is the production deployment target.
 
 | Product | GitHub repository | Vercel project |
 | --- | --- | --- |
@@ -36,13 +34,12 @@ The holding platform and operating products are deployed independently. The GitH
 | Adom Global Commerce | olowolafedare/adom-global-commerce | adom-global-commerce |
 | Global Logistics | olowolafedare/Xedruo-globa-logistics | xedruo-global-logistics |
 
-The legacy SpaceTruo, Healthruo and Properties Vercel project records are retired: they have no active product domains or live production deployments. Their root directories retain redirect stubs for any future compatibility deployment, but the standalone projects are authoritative. Do not use the legacy records as application build targets or store product code in the holding platform.
+The legacy SpaceTruo, Healthruo and Properties Vercel project records are retired. Their standalone projects are authoritative. Do not use the legacy records as application build targets or store product code in the holding platform.
 
 ## Release workflow
-
-1. Make product changes in that product's repository, not in the holding-platform repository.
+1. Make product changes in that product's repository.
 2. Run the repository's checks and review the change.
 3. Merge approved changes to the repository's main branch.
-4. Vercel deploys the matching project from that repository; verify the production deployment and product URL.
-5. Keep shared identity/database migrations in the dedicated Xedruo database repository and apply them only after compatibility review against the shared Supabase project.
-6. Never delete legacy data, credentials, domains, or compatibility routes until their replacement has passed production smoke tests.
+4. Verify the matching Vercel production deployment and product URL.
+5. Keep shared identity/database migrations in the designated Xedruo database repository; confirm its Neon workflow and test migrations on a Neon branch before production.
+6. Never delete legacy data, credentials, domains or compatibility routes until replacements pass production smoke tests.
