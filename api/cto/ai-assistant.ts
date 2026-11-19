@@ -60,16 +60,16 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
     const mode = typeof input.mode === "string" ? input.mode : "architecture";
     const allowedModes = new Set(["architecture", "code", "database", "api", "debug", "security", "review"]);
-    if (!prompt || prompt.length > 18000 || !allowedModes.has(mode)) {
+    if (!prompt || prompt.length > 14000 || !allowedModes.has(mode)) {
       return json(res, 400, { error: "invalid_request", message: "Provide a prompt (maximum 18,000 characters) and a supported engineering mode.", requestId });
     }
     const apiKey = process.env.XEDRION_PLATFORM_API_KEY;
     if (!apiKey) return json(res, 503, { error: "xedrion_not_configured", message: "Xedrion AI platform credential is not configured on the Xedruo Render service.", requestId });
 
     const conversation = Array.isArray(input.conversation)
-      ? input.conversation.slice(-8).filter((turn: any) =>
+      ? input.conversation.slice(-6).filter((turn: any) =>
           turn && (turn.role === "user" || turn.role === "assistant") &&
-          typeof turn.content === "string" && turn.content.length <= 6000
+          typeof turn.content === "string" && turn.content.length <= 1800
         ).map((turn: any) => ({ role: turn.role, content: turn.content }))
       : [];
     const modeInstructions: Record<string, string> = {
