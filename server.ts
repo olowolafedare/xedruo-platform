@@ -26,7 +26,7 @@ async function assetFetch(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pathname = decodeURIComponent(url.pathname);
   const requested = path.resolve(dist, "." + pathname);
-  if (!requested.startsWith(dist + path.sep) && requested !== path.join(dist, "index.html")) {
+  if (!requested.startsWith(dist + path.sep) && requested !== dist && requested !== path.join(dist, "index.html")) {
     return new Response("Not found", { status: 404 });
   }
   let file = requested;
