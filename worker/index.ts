@@ -37,6 +37,10 @@ async function route(request: Request, url: URL): Promise<Response> {
     const mod = await import("../api/admin/auth/[...path].js");
     return runNodeHandler(mod.default, request);
   }
+  if (path === "/api/cto/ai-assistant") {
+    const mod = await import("../api/cto/ai-assistant.js");
+    return runNodeHandler(mod.default, request);
+  }
   if (path === "/api/media") {
     // @ts-ignore plain JS module
     const mod = await import("../api/media.js");
