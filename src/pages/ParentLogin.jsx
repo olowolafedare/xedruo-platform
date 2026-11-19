@@ -68,6 +68,16 @@ export default function ParentLogin({ unit = null }) {
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying access...</> : "Enter Xedruo Platform"}
             </Button>
           </form>
+          <div className="mt-5 pt-4 border-t border-slate-800">
+            <p className="text-xs text-slate-400 text-center mb-3">Unit-specific sign-in</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["Chairman","/chairman/login"],["CEO","/ceo/login"],["CFO","/cfo/login"],
+                ["Chief of Staff","/cos/login"],["Operations","/operations/login"],
+                ["Customer Service","/customer-service/login"],["CTO — Technical Management","/cto/login"]
+              ].map(([label,href])=><a key={href} href={href} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-center hover:border-emerald-400">{label}</a>)}
+            </div>
+          </div>
           <div className="mt-5 text-center text-[11px] text-slate-500">Access is checked against the private Neon platform-admin registry.</div>
         </section>
       </div>
