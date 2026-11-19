@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Mail, Lock, Loader2, AlertTriangle } from "lucide-react";
+import { Shield, Mail, Lock, Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { platformAdminAuth } from "@/lib/platformAdminAuth";
 
 export default function ParentLogin({ unit = null }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +63,13 @@ export default function ParentLogin({ unit = null }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="parent-password" className="text-slate-200">Password</Label>
-              <div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><Input id="parent-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="administrator password" className="pl-10 h-12 bg-slate-950 border-slate-700 text-white" required /></div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Input id="parent-password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="administrator password" className="pl-10 pr-12 h-12 bg-slate-950 border-slate-700 text-white" required />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" disabled={loading} className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying access...</> : "Enter Xedruo Platform"}
