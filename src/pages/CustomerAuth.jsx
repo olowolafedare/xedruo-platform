@@ -23,6 +23,7 @@ export default function CustomerAuth() {
   const [legalName, setLegalName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(REDIRECT_ERRORS[params.get('error')] || '');
 
@@ -142,7 +143,10 @@ export default function CustomerAuth() {
               <input className={inputClass} type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </label>
             <label className="block text-sm font-medium text-slate-700">Password
-              <input className={inputClass} type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <div className="relative">
+                <input className={inputClass + ' pr-12'} type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-2 text-slate-500 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-900">{showPassword ? 'Hide' : 'Show'}</button>
+              </div>
             </label>
             <button className={primaryClass} disabled={busy}>{busy ? 'Signing in…' : 'Login with email'}</button>
             <button type="button" onClick={() => { setMode('login'); setError(''); }} className="w-full py-2 text-sm text-slate-600">Back to login options</button>
