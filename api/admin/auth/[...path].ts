@@ -72,12 +72,68 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return json(res,200,{admin});
     }
     const authenticatedAdmin = await getAdmin(req);
+    if (path === "access-requests" && req.method === "POST") {
+      if (!sameOrigin(req)) return json(res,403,{error:"origin_not_allowed"});
+      const input = await body(req);
+      const fullName = String(input.fullName || "").trim();
+      const workEmail = String(input.workEmail || "").trim().toLowerCase();
+      const requestedUnit = String(input.unit || "");
+      const positionTitle = String(input.positionTitle || "").trim();
+      const reason = String(input.reason || "").trim();
+      const sponsorEmail = String(input.sponsorEmail || "").trim().toLowerCase() || null;
+      const units = new Set(["chairman","ceo","cfo","cos","operations","customer_service","cto"]);
+      if (fullName.length < 2 || fullName.length > 160 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(workEmail) ||
+          !units.has(requestedUnit) || positionTitle.length < 2 || positionTitle.length > 120 ||
+          reason.length < 10 || reason.length > 2000 ||
+          (sponsorEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(sponsorEmail))) {
+        return json(res,400,{error:"invalid_request",message:"Complete all required fields with valid details."});
+      }
+      const recent = await pool.query(
+        "SELECT id FROM public.xedruo_staff_access_requests WHERE lower(work_email)=$1 AND requested_unit=$2 AND status='pending' AND created_at>now()-interval '30 days' LIMIT 1",
+        [workEmail,requestedUnit]
+      );
+      if (recent.rows[0]) return json(res,409,{error:"request_exists",message:"A pending request already exists for this email and unit."});
+      const saved = await pool.query(
+        "INSERT INTO public.xedruo_staff_access_requests(full_name,work_email,requested_unit,position_title,reason,sponsor_email) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,status,created_at",
+        [fullName,workEmail,requestedUnit,positionTitle,reason,sponsorEmail]
+      );
+      return json(res,201,{request:saved.rows[0],message:"Access request submitted for approval."});
+    }
+    if (path === "access-requests" && req.method === "GET") {
+      if (!authenticatedAdmin || !["governor","chairman","ceo"].includes(authenticatedAdmin.role)) return json(res,403,{error:"forbidden"});
+      const rows = await pool.query(
+        "SELECT id,full_name,work_email,requested_unit,position_title,reason,sponsor_email,status,decision_at,decision_note,created_at FROM public.xedruo_staff_access_requests ORDER BY created_at DESC LIMIT 100"
+      );
+      return json(res,200,{requests:rows.rows});
+    }
+    if (path.startsWith("access-requests/") && req.method === "PATCH") {
+      if (!sameOrigin(req)) return json(res,403,{error:"origin_not_allowed"});
+      if (!authenticatedAdmin) return json(res,401,{error:"unauthenticated"});
+      const requestId = path.slice("access-requests/".length);
+      if (!/^[0-9a-f-]{36}$/i.test(requestId)) return json(res,400,{error:"invalid_request_id"});
+      const input = await body(req);
+      const decision = String(input.decision || "");
+      if (!["approved","rejected"].includes(decision)) return json(res,400,{error:"invalid_decision"});
+      const found = await pool.query("SELECT requested_unit,status FROM public.xedruo_staff_access_requests WHERE id=$1",[requestId]);
+      if (!found.rows[0]) return json(res,404,{error:"request_not_found"});
+      if (found.rows[0].status !== "pending") return json(res,409,{error:"already_decided"});
+      const unit = String(found.rows[0].requested_unit);
+      const isChairman = ["governor","chairman"].includes(authenticatedAdmin.role);
+      const isCEOApprover = authenticatedAdmin.role === "ceo" && ["cos","operations","customer_service"].includes(unit);
+      if (!isChairman && !isCEOApprover) return json(res,403,{error:"approval_not_authorized"});
+      if (unit === "chairman" && isChairman) return json(res,403,{error:"separation_of_duties",message:"A Chairman cannot approve their own unit's access request."});
+      const updated = await pool.query(
+        "UPDATE public.xedruo_staff_access_requests SET status=$1,decision_by=$2,decision_at=now(),decision_note=$3 WHERE id=$4 AND status='pending' RETURNING id,status,decision_at",
+        [decision,authenticatedAdmin.id,String(input.note || "").slice(0,1000) || null,requestId]
+      );
+      return json(res,200,{request:updated.rows[0],message:"Decision recorded. Account provisioning remains a separate controlled step."});
+    }
     if (path === "companies" && req.method === "GET") {
-      if (!authenticatedAdmin || !["ceo","governor"].includes(authenticatedAdmin.role)) return json(res,403,{error:"forbidden"});
+      if (!authenticatedAdmin || !["ceo","governor","chairman"].includes(authenticatedAdmin.role)) return json(res,403,{error:"forbidden"});
       const rows = await pool.query("SELECT company_slug,display_name,app_origin,enabled,allowed_callbacks,allowed_logout_urls,updated_at FROM public.xedruo_company_app_registry ORDER BY display_name");
       return json(res,200,{companies:rows.rows});
     }
-    if (req.method !== "POST" && req.method !== "PUT") return json(res,405,{error:"method_not_allowed"});
+    if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") return json(res,405,{error:"method_not_allowed"});
     if (!sameOrigin(req)) return json(res,403,{error:"origin_not_allowed"});
     if (path === "logout") {
       const token = readCookie(req);
@@ -163,7 +219,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const bootstrapEmail = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_EMAIL || "").trim().toLowerCase();
       const bootstrapHash = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_PASSWORD_HASH || "");
       const bootstrapRole = String(process.env.XEDRUO_ADMIN_BOOTSTRAP_ROLE || "ceo");
-      const allowedRoles = new Set(["governor","ceo","cfo","developer","customer_service","operations"]);
+      const allowedRoles = new Set(["governor","chairman","ceo","cfo","cos","developer","cto","customer_service","operations"]);
       if (bootstrapEmail && bootstrapHash && email === bootstrapEmail && allowedRoles.has(bootstrapRole) &&
           await checkPassword(password,bootstrapHash)) {
         const count = await pool.query("SELECT count(*)::int AS total FROM public.xedruo_platform_admins");
