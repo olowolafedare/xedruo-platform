@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, Mail, Lock, Loader2, AlertTriangle } from "lucide-react";
 import { platformAdminAuth } from "@/lib/platformAdminAuth";
 
-export default function ParentLogin() {
+export default function ParentLogin({ unit = null }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +19,16 @@ export default function ParentLogin() {
     setLoading(true);
     try {
       await platformAdminAuth.login(email.trim(), password);
+      const admin = await platformAdminAuth.me();
+      const allowed = {
+        chairman: ["chairman","governor"], ceo: ["ceo"], cfo: ["cfo"],
+        cos: ["cos"], operations: ["operations"],
+        "customer-service": ["customer_service"], cto: ["cto","developer"]
+      };
+      if (unit && !(allowed[unit] || []).includes(admin?.role)) {
+        await platformAdminAuth.logout().catch(() => {});
+        throw new Error("This account is not assigned to the selected unit.");
+      }
       navigate("/parent-company", { replace: true });
     } catch (err) {
       setError(err?.message || "Unable to authenticate platform administrator.");
@@ -58,6 +68,16 @@ export default function ParentLogin() {
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying access...</> : "Enter Xedruo Platform"}
             </Button>
           </form>
+          <div className="mt-5 pt-4 border-t border-slate-800">
+            <p className="text-xs text-slate-400 text-center mb-3">Unit-specific sign-in</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["Chairman","/chairman/login"],["CEO","/ceo/login"],["CFO","/cfo/login"],
+                ["Chief of Staff","/cos/login"],["Operations","/operations/login"],
+                ["Customer Service","/customer-service/login"],["CTO — Technical Management","/cto/login"]
+              ].map(([label,href])=><a key={href} href={href} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-center hover:border-emerald-400">{label}</a>)}
+            </div>
+          </div>
           <div className="mt-5 text-center text-[11px] text-slate-500">Access is checked against the private Neon platform-admin registry.</div>
         </section>
       </div>

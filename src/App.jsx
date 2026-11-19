@@ -14,6 +14,7 @@ import GroupLanding from './pages/GroupLanding'
 import Management from './pages/Management'
 import ParentCompany from './pages/ParentCompany'
 import CustomerAuth from './pages/CustomerAuth'
+import StaffAccessRequest from './pages/StaffAccessRequest'
 
 const Loading = () => <div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /></div>
 
@@ -83,6 +84,13 @@ function AuthenticatedApp() {
         {externalRoutes.map(([path, url]) => <Route key={path} path={path} element={<ExternalRedirect to={url} />} />)}
         <Route path="/management" element={<ProtectedRoute unauthenticatedElement={<ParentLogin />}><IdentityGate><Management /></IdentityGate></ProtectedRoute>} />
         <Route path="/login" element={<ParentLogin />} />
+          <Route path="/chairman/login" element={<ParentLogin unit="chairman" />} />
+          <Route path="/ceo/login" element={<ParentLogin unit="ceo" />} />
+          <Route path="/cfo/login" element={<ParentLogin unit="cfo" />} />
+          <Route path="/cos/login" element={<ParentLogin unit="cos" />} />
+          <Route path="/operations/login" element={<ParentLogin unit="operations" />} />
+          <Route path="/customer-service/login" element={<ParentLogin unit="customer-service" />} />
+          <Route path="/cto/login" element={<ParentLogin unit="cto" />} />
         <Route path="/register" element={<Navigate to="/parent-company" replace />} />
         <Route path="/auth/callback" element={<Navigate to="/parent-company" replace />} />
         <Route path="/forgot-password" element={<Navigate to="/parent-company" replace />} />
@@ -97,7 +105,7 @@ function AuthenticatedApp() {
 
 function RouteSwitcher() {
   const location = useLocation()
-  const isPlatformAdminRoute = location.pathname === '/login' || location.pathname === '/parent-company' || location.pathname === '/customer-auth'
+  const isPlatformAdminRoute = location.pathname === '/login' || location.pathname === '/parent-company' || location.pathname === '/customer-auth' || location.pathname === '/access-request' || location.pathname.endsWith('/login')
 
   // Keep platform administrator authentication completely outside the customer
   // AuthProvider so these routes never initialize or depend on Supabase Auth.
@@ -108,6 +116,7 @@ function RouteSwitcher() {
           <Route path="/login" element={<ParentLogin />} />
           <Route path="/parent-company" element={<ParentCompany />} />
           <Route path="/customer-auth" element={<CustomerAuth />} />
+          <Route path="/access-request" element={<StaffAccessRequest />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </Suspense>
