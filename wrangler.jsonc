@@ -4,6 +4,7 @@
   "main": "worker/index.ts",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -15,9 +16,5 @@
     "AUTH_ISSUER": "https://xedruo.com",
     "AUTH_APP_ORIGIN": "https://xedruo.com",
     "XEDRUO_GOOGLE_REDIRECT_URI": "https://xedruo.com/api/auth/google/callback"
-  },
-  "routes": [
-    { "pattern": "xedruo.com", "custom_domain": true },
-    { "pattern": "www.xedruo.com", "custom_domain": true }
-  ]
+  }
 }
