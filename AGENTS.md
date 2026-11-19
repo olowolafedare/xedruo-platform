@@ -1,37 +1,30 @@
 # AGENTS.md
 
 ## Project context
+Xedruo Platform is the control plane for the Xedruo ecosystem and is approved to become a full Xedruo-owned Backend-as-a-Service (BaaS). The database foundation is Neon PostgreSQL. Neon supplies database infrastructure; Xedruo owns APIs, control plane, authorization, tenant isolation, developer experience and operations.
 
-This is the Xedruo Group Holdings platform. The application is maintained in GitHub, deployed by Vercel, and uses the shared Xedruo Supabase project. Do not use the legacy Base44 CLI/SDK for new work; the base44 folder is reference-only.
+Supabase is not the target backend. Existing Supabase SDK imports, environment references, data and services are legacy migration dependencies until each path has been replaced and verified. Never delete legacy records, projects, credentials or secrets without explicit approval and a tested migration/backup.
 
-## Backend: Supabase
+## Architecture boundaries
+- Independent company apps own their UI, customer routes, callback handlers and dashboards; they integrate with Xedruo through versioned APIs.
+- Xedruo Platform is the BaaS control plane and administrator/developer console, not a customer login destination.
+- Shared service domains include identity/authentication, company/project registry, database management, protected data APIs, storage, realtime/events, functions/jobs, developer tools, usage, monitoring, support and audit.
+- Keep Neon owner credentials server-side. Browser/mobile clients call protected Xedruo APIs.
+- Derive company/tenant context from verified credentials and server-side registry records, never arbitrary client input. Enforce company data isolation and least privilege.
+- Preserve the central identity requirements: random 10-digit ID with country metadata, Google sign-in, Xedruo ID/password alternative, legal name and phone collection; SMS verification is not currently required.
+- Customer sign-in returns to the originating company's approved callback/dashboard. Never fall back to the platform home.
+- Platform administrator authentication remains separate from customer authentication.
 
-- Auth: Supabase Auth with Google OAuth/PKCE and the supported email/phone flows.
-- Accounts: `public.xedruo_accounts` and `public.xedruo_profiles`, keyed by the Supabase Auth user UUID.
-- Staff roles: `public.xedruo_account_roles` joined to `public.xedruo_roles`; never read roles from user-editable metadata.
-- Shared identity: `public.xedruo_identity`, issued only through `ensure_xedruo_identity`; do not generate IDs in browser code.
-- Company app profiles: `public.xedruo_company_profiles`, created through `ensure_xedruo_company_profile`.
-- Country/phone: `public.xedruo_country_calling_codes` and the `set_xedruo_identity_phone` RPC.
-- Core records: `public.xedruo_records`, protected by owner-scoped RLS.
-- API: Supabase Edge Function `xedruo-core-api` backs `xedruo.entities.*`.
-- Storage: Supabase Storage (`xedruo-media` bucket).
-- Enforce authorization through RLS and trusted server-side checks. Never expose service-role or VAPID private keys.
+## Current implementation caution
+The central auth gateway uses `@neondatabase/serverless` and `DATABASE_URL`. Do not assume the entire platform is Supabase-free: frontend client and media API still contain Supabase Auth/data/storage dependencies. Replace these through staged, tested migrations before removing the package or environment variables.
 
-## Key files
+Full BaaS scope is a target architecture, not a claim that every service is implemented. See `docs/full-neon-baas-architecture.md` for the decision record, current audit and migration gates.
 
-- `src/api/xedruoClient.js`: Supabase client and Xedruo API wrapper.
-- `src/lib/AuthContext.jsx`: global authentication state.
-- `src/lib/xedruoIdentity.js`: central identity and company-profile RPC helpers.
-- `src/pages/IdentityOnboarding.jsx`: country, phone and identity onboarding.
-- `src/components/IdentityGate.jsx`: protects management routes until country and phone are saved.
-- `src/pages/ParentLogin.jsx`, `src/pages/ParentCompany.jsx`: internal management portal.
-
-## Database changes
-
-The shared database source of truth is the separate `olowolafedare/xedruo-Database` repository. Do not run a blind `supabase db push` from this application repository. Review and apply shared migrations from the database repository, then update application code.
-
-## Development
-
-- Use `npm run dev`, `npm run lint`, and `npm run build`.
-- Staff roles include governor, ceo, cfo, developer, customer_service and operations.
-- Preserve existing Auth users and account data. Do not remove legacy records without a verified migration and backup.
+## Development and release
+- Use `npm run dev`, `npm run lint`, `npm run typecheck` and `npm run build`.
+- Test schema migrations on a Neon branch; use direct connections for migrations and pooled connections for normal application traffic.
+- Never expose service keys, signing secrets, OAuth secrets, storage credentials or VAPID private keys.
+- Enforce least privilege for governor, ceo, cfo, developer, customer_service and operations roles; audit sensitive actions.
+- Keep product changes in each product's own repository. Keep platform/shared-service code here and shared database migrations in the designated database repository after confirming its current Neon workflow.
+- Preserve Android/mobile behavior unless explicitly included in scope.
+- Do not deploy production changes until build, security, smoke and end-to-end checks pass.
