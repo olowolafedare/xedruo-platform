@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, Mail, Lock, Loader2, AlertTriangle } from "lucide-react";
 import { platformAdminAuth } from "@/lib/platformAdminAuth";
 
-export default function ParentLogin() {
+export default function ParentLogin({ unit = null }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +19,16 @@ export default function ParentLogin() {
     setLoading(true);
     try {
       await platformAdminAuth.login(email.trim(), password);
+      const admin = await platformAdminAuth.me();
+      const allowed = {
+        chairman: ["chairman","governor"], ceo: ["ceo"], cfo: ["cfo"],
+        cos: ["cos"], operations: ["operations"],
+        "customer-service": ["customer_service"], cto: ["cto","developer"]
+      };
+      if (unit && !(allowed[unit] || []).includes(admin?.role)) {
+        await platformAdminAuth.logout().catch(() => {});
+        throw new Error("This account is not assigned to the selected unit.");
+      }
       navigate("/parent-company", { replace: true });
     } catch (err) {
       setError(err?.message || "Unable to authenticate platform administrator.");
