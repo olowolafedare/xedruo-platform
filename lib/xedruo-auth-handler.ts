@@ -236,7 +236,7 @@ async function getHandler(req: Request, path: string) {
       }
       const phoneTaken = await pool.query("SELECT 1 FROM xedruo_identity WHERE phone_e164=$1 LIMIT 1", [phoneE164]);
       if (phoneTaken.rows[0]) {
-        return withCors(fail("phone_already_registered", "This phone number is already registered. Log in instead, or use a different number.", 409), verified.origin);
+        return fail("phone_already_registered", "This phone number is already registered. Log in instead, or use a different number.", 409);
       }
       registration = { countryCode, phoneE164, legalName };
     }
