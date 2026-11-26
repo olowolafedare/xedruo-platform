@@ -72,13 +72,24 @@ async function getCompany(slug: string): Promise<Company | null> {
 async function verifiedCompany(req: Request, slug: string) {
   const origin = originOf(req.headers.get("origin"));
   const company = await getCompany(slug);
-  // Platform-hosted customer auth may call the gateway for a registered company.
-  // The customer authentication UI is served by the platform's Vercel deployment,
-  // while xedruo.com remains the canonical issuer and Google callback domain.
+  if (!company) return null;
+
+  // Trusted Next.js server-to-server calls use a dedicated per-company secret.
+  // Browser Origin is not an authorization mechanism and must not substitute for this key.
+  const suppliedKey = req.headers.get("x-xedruo-company-key") || "";
+  const expectedKey = slug === "xedrion-ai" ? process.env.XEDRION_CENTRAL_AUTH_API_KEY || "" : "";
+  const serverToServer = Boolean(expectedKey && suppliedKey && safeEqual(suppliedKey, expectedKey));
+  if (serverToServer) {
+    if (origin && origin !== originOf(company.app_origin)) return null;
+    return { company, origin: origin || originOf(company.app_origin), serverToServer: true };
+  }
+
+  // Browser-origin calls remain available for company UIs; sensitive server routes
+  // below explicitly reject this weaker browser-only verification mode.
   const platformOrigin = originOf(process.env.AUTH_APP_ORIGIN || "https://xedruo.com");
   const issuerOrigin = originOf(issuer);
-  if (!origin || !company || (originOf(company.app_origin) !== origin && issuerOrigin !== origin && platformOrigin !== origin)) return null;
-  return { company, origin };
+  if (!origin || (originOf(company.app_origin) !== origin && issuerOrigin !== origin && platformOrigin !== origin)) return null;
+  return { company, origin, serverToServer: false };
 }
 async function audit(event: string, userId: string | null, company: string | null, details: Record<string, unknown> = {}) {
   await pool.query(
@@ -284,6 +295,10 @@ async function postHandler(req: Request, path: string) {
   const slug = String(body.companySlug || req.headers.get("x-xedruo-company") || "").trim().toLowerCase();
   const verified = await verifiedCompany(req, slug);
   if (!verified) return fail("company_not_authorized", "This app origin is not registered for that company.", 403);
+  const serverOnlyPaths = new Set(["google/start", "oauth/exchange", "session/refresh", "session/validate", "session/logout"]);
+  if (serverOnlyPaths.has(path) && !verified.serverToServer) {
+    return withCors(fail("server_auth_required", "This endpoint requires the registered company's server-to-server key.", 403), verified.origin);
+  }
   const company = verified.company;
   let response: Response;
 
